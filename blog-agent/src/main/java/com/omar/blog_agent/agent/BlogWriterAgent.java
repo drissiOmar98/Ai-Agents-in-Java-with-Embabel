@@ -199,5 +199,34 @@ public class BlogWriterAgent {
         return publishedPost;
     }
 
+    /**
+     * Asks the LLM for front matter metadata (description, tags, keywords,
+     * read time), using {@link ReadingStatsTool} for an accurate read time.
+     *
+     * @param post the post to generate metadata for
+     * @param ai   Embabel's fluent LLM access point
+     * @return the generated front matter metadata
+     */
+    private FrontMatter generateFrontMatter(FinalPost post, Ai ai) {
+        return ai
+                .withDefaultLlm()
+                .withToolObject(readingStatsTool)
+                .withId("blog-post-front-matter")
+                .withPromptContributors(List.of(Personas.JSON_OUTPUT))
+                .creating(FrontMatter.class)
+                .fromPrompt("""
+                        Generate front matter metadata for this blog post.
+                        Provide a concise description (1-2 sentences), relevant tags, and up to %d keywords.
+
+                        Use the calculateReadingStats tool on the post content below to compute
+                        the read time. Put the tool's exact return string into the readTime field.
+
+                        Title: %s
+                        Content:
+                        %s
+                        """.formatted(properties.numberOfKeywords(), post.title(), post.content())
+                );
+    }
+
 
 }
