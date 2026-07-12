@@ -174,5 +174,30 @@ public class BlogWriterAgent {
         return new FinalPost(post.title(), contentWithTldr, post.feedback());
     }
 
+    /**
+     * Step 5 (goal): generates YAML front matter, prepends it to the post,
+     * writes the finished Markdown file to disk, and returns the published
+     * post. This is the action Embabel treats as achieving the agent's goal.
+     *
+     * <p>The LLM is given the {@link ReadingStatsTool} so it computes an
+     * accurate read time rather than estimating one itself.</p>
+     *
+     * @param post the output of {@link #addTldr}
+     * @param ai   Embabel's fluent LLM access point
+     * @return the fully published post, including front matter
+     */
+    @AchievesGoal(description = "A reviewed and polished blog post with front matter")
+    @Action(description = "Add front matter to the top of the blog post")
+    public PublishedPost addFrontMatter(FinalPost post, Ai ai) {
+        FrontMatter frontMatter = generateFrontMatter(post, ai);
+        String frontMatterBlock = renderFrontMatterBlock(post, frontMatter);
+
+        String contentWithFrontMatter = frontMatterBlock + "\n" + post.content();
+        PublishedPost publishedPost = new PublishedPost(post.title(), contentWithFrontMatter, post.feedback());
+
+        writeToFile(publishedPost);
+        return publishedPost;
+    }
+
 
 }
