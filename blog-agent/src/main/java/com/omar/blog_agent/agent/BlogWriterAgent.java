@@ -58,4 +58,35 @@ public class BlogWriterAgent {
         this.readingStatsTool = readingStatsTool;
     }
 
+    /**
+     * Step 1: researches the user's topic using web search tools.
+     *
+     * <p>Search usage is intentionally capped in the prompt to avoid rate
+     * limiting on the underlying search provider.</p>
+     *
+     * @param userInput the raw topic supplied by the user
+     * @param ai        Embabel's fluent LLM access point
+     * @return the topic paired with a research summary
+     */
+    @Action(description = "Research the topic using web search")
+    public ResearchedTopic researchTopic(UserInput userInput, Ai ai) {
+        return ai
+                .withDefaultLlm()
+                .withToolGroup(CoreToolGroups.WEB)
+                .withId("blog-topic-researcher")
+                .creating(ResearchedTopic.class)
+                .fromPrompt("""
+                        Research the following topic using web search tools.
+                        Find current, relevant, and accurate information.
+                        Limit yourself to no more than 3 web searches to avoid rate limiting.
+
+                        Topic: %s
+
+                        Provide the original topic and a concise summary
+                        of your findings that would be useful for writing a blog post.
+                        """.formatted(userInput.getContent())
+                );
+    }
+
+
 }
