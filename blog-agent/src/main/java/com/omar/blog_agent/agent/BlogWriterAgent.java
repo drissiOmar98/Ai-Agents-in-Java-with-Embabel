@@ -88,5 +88,33 @@ public class BlogWriterAgent {
                 );
     }
 
+    /**
+     * Step 2: writes a beginner-friendly first draft from the research.
+     *
+     * @param research the output of {@link #researchTopic}
+     * @param ai       Embabel's fluent LLM access point
+     * @return the first draft, title and Markdown content
+     */
+    @Action(description = "Write a first draft of the blog post")
+    public DraftPost writeDraft(ResearchedTopic research, Ai ai) {
+        return ai
+                .withLlm(LlmOptions.withDefaults().withMaxTokens(16384))
+                .withId("blog-post-draft-writer")
+                .withPromptContributors(List.of(Personas.WRITER, Personas.JSON_OUTPUT))
+                .creating(DraftPost.class)
+                .fromPrompt("""
+                        Write a blog post about: %s
+
+                        Use the following research to inform your writing:
+                        %s
+
+                        Keep it practical and beginner friendly.
+                        Use short sentences and plain language.
+                        Include code examples but keep them short and simple.
+                        Write the content in Markdown.
+                        """.formatted(research.topic(), research.research())
+                );
+    }
+
 
 }
