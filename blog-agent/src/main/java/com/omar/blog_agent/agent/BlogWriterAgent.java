@@ -116,5 +116,35 @@ public class BlogWriterAgent {
                 );
     }
 
+    /**
+     * Step 3: reviews the draft for technical accuracy and tightens the prose.
+     *
+     * <p>Uses the {@code reviewer} LLM role (configured separately from the
+     * default model in {@code application.yml}) so review quality can be
+     * tuned independently of drafting.</p>
+     *
+     * @param draft the output of {@link #writeDraft}
+     * @param ai    Embabel's fluent LLM access point
+     * @return the revised title and content plus a summary of the changes made
+     */
+    @Action(description = "Review and improve the draft")
+    public ReviewedPost reviewDraft(DraftPost draft, Ai ai) {
+        return ai
+                .withLlm(LlmOptions.withLlmForRole("reviewer").withMaxTokens(16384))
+                .withId("blog-post-reviewer")
+                .withPromptContributors(List.of(Personas.REVIEWER, Personas.JSON_OUTPUT))
+                .creating(ReviewedPost.class)
+                .fromPrompt("""
+                        Title: %s
+                        Content:
+                        %s
+
+                        Fix any technical errors. Tighten the writing.
+                        Provide the revised title, revised content, and a brief
+                        summary of the changes you made as feedback.
+                        """.formatted(draft.title(), draft.content())
+                );
+    }
+
 
 }
