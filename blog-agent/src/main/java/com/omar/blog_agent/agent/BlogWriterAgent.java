@@ -228,5 +228,72 @@ public class BlogWriterAgent {
                 );
     }
 
+    /**
+     * Renders the YAML front matter block for a post, from its title and
+     * generated metadata.
+     *
+     * @param post        the post being published, used for its title
+     * @param frontMatter the generated metadata to render
+     * @return the complete {@code ---}-delimited YAML front matter block
+     */
+    private String renderFrontMatterBlock(FinalPost post, FrontMatter frontMatter) {
+        String slug = Slugs.slugify(post.title());
 
+        String tags = frontMatter.tags().stream()
+                .map(tag -> "  - " + tag)
+                .collect(Collectors.joining("\n"));
+
+        String keywords = frontMatter.keywords().stream()
+                .map(keyword -> "  - " + keyword)
+                .collect(Collectors.joining("\n"));
+
+        return """
+                ---
+                title: "%s"
+                slug: %s
+                date: "%sT08:00:00.000Z"
+                published: true
+                description: "%s"
+                author: "Dan Vega"
+                readTime: "%s"
+                tags:
+                %s
+                keywords:
+                %s
+                ---
+                """.formatted(
+                post.title(),
+                slug,
+                LocalDate.now(),
+                frontMatter.description(),
+                frontMatter.readTime(),
+                tags,
+                keywords
+        );
+    }
+
+    /**
+     * Writes a post's content to {@code <output-dir>/<slugified-title>.md},
+     * creating the output directory if it does not yet exist.
+     *
+     * <p>Failures are logged rather than propagated so a filesystem issue
+     * does not surface as an opaque agent failure to the caller; the
+     * {@link PublishedPost} is still returned in memory either way.</p>
+     *
+     * @param post the fully assembled post to persist
+     */
+    private void writeToFile(BlogPost post) {
+        String filename = Slugs.slugify(post.title()) + ".md";
+
+        Path outputDir = Path.of(properties.outputDir());
+        Path filePath = outputDir.resolve(filename);
+
+        try {
+            Files.createDirectories(outputDir);
+            Files.writeString(filePath, post.content());
+            log.info("Blog post written to {}", filePath.toAbsolutePath());
+        } catch (IOException e) {
+            log.error("Failed to write blog post to {}: {}", filePath, e.getMessage());
+        }
+    }
 }
