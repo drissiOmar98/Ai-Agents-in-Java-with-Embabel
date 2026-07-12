@@ -146,5 +146,33 @@ public class BlogWriterAgent {
                 );
     }
 
+    /**
+     * Step 4: generates a one- or two-sentence TLDR and prepends it as a
+     * Markdown blockquote above the reviewed content.
+     *
+     * @param post the output of {@link #reviewDraft}
+     * @param ai   Embabel's fluent LLM access point
+     * @return the post with a {@code > **TLDR:**} block prepended to its content
+     */
+    @Action(description = "Add a TLDR summary to the top of the blog post")
+    public FinalPost addTldr(ReviewedPost post, Ai ai) {
+        String tldr = ai
+                .withDefaultLlm()
+                .withId("blog-post-tldr")
+                .creating(String.class)
+                .fromPrompt("""
+                        Write a one or two sentence TLDR summary for this blog post.
+                        Return only the summary text, nothing else.
+
+                        Title: %s
+                        Content:
+                        %s
+                        """.formatted(post.title(), post.content())
+                );
+
+        String contentWithTldr = "> **TLDR:** " + tldr + "\n\n" + post.content();
+        return new FinalPost(post.title(), contentWithTldr, post.feedback());
+    }
+
 
 }
