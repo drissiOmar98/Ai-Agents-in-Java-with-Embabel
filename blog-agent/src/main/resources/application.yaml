@@ -1,3 +1,36 @@
 spring:
   application:
     name: blog-agent
+
+  ai:
+    mcp:
+      client:
+        # MCP servers exposed to the agent as callable tools.
+        stdio:
+          connections:
+            # Brave Search, used by BlogWriterAgent#researchTopic via CoreToolGroups.WEB.
+            brave-search-mcp:
+              command: npx
+              args:
+                - -y
+                - "@modelcontextprotocol/server-brave-search"
+              env:
+                BRAVE_API_KEY: ${BRAVE_API_KEY}
+
+blog-agent:
+  output-dir: blog-posts     # directory published posts are written to
+  number-of-keywords: 5      # max SEO keywords generated per post
+
+embabel:
+  agent:
+    platform:
+      models:
+        openai:
+          api-key: ${OPENAI_API_KEY}
+    logging:
+      personality: starwars  # cosmetic: flavors Embabel's console log output
+
+  models:
+    default-llm: claude-sonnet-4-6   # used by research, draft, TLDR, and front-matter steps
+    llms:
+      reviewer: claude-opus-4-6      # used only by BlogWriterAgent#reviewDraft
