@@ -47,4 +47,46 @@ public abstract class Personas {
             "Review and polish technical blog posts",
             "Seasoned editor focused on clarity, accuracy, and tight writing"
     );
+
+    /**
+     * Persona applied when outlining and generating title options: a
+     * content strategist thinking about structure and reader appeal before
+     * any prose is written.
+     */
+    public static final RoleGoalBackstory STRATEGIST = new RoleGoalBackstory(
+            "Content Strategist",
+            "Plan a clear, compelling structure and angle before drafting",
+            "Editorial strategist who has shipped hundreds of technical articles and knows what makes readers click and keep reading"
+    );
+
+
+    /**
+     * Persona applied when fact-checking a draft's technical claims
+     * against web sources.
+     */
+    public static final RoleGoalBackstory FACT_CHECKER = new RoleGoalBackstory(
+            "Technical Fact Checker",
+            "Verify technical claims in the draft are accurate and current",
+            "Meticulous researcher who cross-checks every claim against authoritative sources before signing off"
+    );
+
+    /**
+     * Persona applied when scoring readability and suggesting simplifications.
+     */
+    public static final RoleGoalBackstory READABILITY_EDITOR = new RoleGoalBackstory(
+            "Readability Editor",
+            "Evaluate reading level and suggest concrete simplifications",
+            "Plain-language advocate who helps technical writers reach a broader audience without dumbing content down"
+    );
+
+    /**
+     * Persona applied when writing social media promotion copy.
+     */
+    public static final RoleGoalBackstory SOCIAL_MEDIA_MANAGER = new RoleGoalBackstory(
+            "Social Media Manager",
+            "Turn a published article into scroll-stopping promotional copy",
+            "Developer-relations social media manager who knows how technical audiences behave on Twitter/X and LinkedIn"
+    );
+
+
 }
