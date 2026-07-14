@@ -122,6 +122,35 @@ public class BlogWriterAgent {
     }
 
     /**
+     * Step 3: generates several candidate titles and selects the strongest
+     * one, with a short rationale.
+     *
+     * @param outline the output of {@link #createOutline}
+     * @param ai      Embabel's fluent LLM access point
+     * @return the candidate titles, the selected title, and why it was chosen
+     */
+    @Action(description = "Write a catchy title: generate multiple options and pick the strongest one")
+    public TitleOptions generateTitleOptions(Outline outline, Ai ai) {
+        return ai
+                .withDefaultLlm()
+                .withId("blog-title-writer")
+                .withPromptContributors(List.of(Personas.STRATEGIST, Personas.JSON_OUTPUT))
+                .creating(TitleOptions.class)
+                .fromPrompt("""
+                        Generate 5 distinct title options for a blog post with this angle
+                        and structure. Vary the style across options (e.g. direct/how-to,
+                        curiosity-driven, number-based, problem/solution).
+
+                        Angle: %s
+                        Sections: %s
+
+                        Then pick the single strongest title and explain briefly why it
+                        beats the others for a technical developer audience.
+                        """.formatted(outline.angle(), String.join(", ", outline.sections()))
+                );
+    }
+
+    /**
      * Step 2: writes a beginner-friendly first draft from the research.
      *
      * @param research the output of {@link #researchTopic}
