@@ -179,32 +179,51 @@ public class BlogWriterAgent {
                 );
     }
 
+
     /**
-     * Step 2: writes a beginner-friendly first draft from the research.
+     * Step 5: writes the full first draft, continuing from the pre-written
+     * hook and following the outline's section structure, using the
+     * already-selected title.
      *
-     * @param research the output of {@link #researchTopic}
-     * @param ai       Embabel's fluent LLM access point
+     * @param outline      the output of {@link #createOutline}
+     * @param titleOptions the output of {@link #generateTitleOptions}
+     * @param hook         the output of {@link #writeHook}
+     * @param ai           Embabel's fluent LLM access point
      * @return the first draft, title and Markdown content
      */
     @Action(description = "Write a first draft of the blog post")
-    public DraftPost writeDraft(ResearchedTopic research, Ai ai) {
-        return ai
+    public DraftPost writeDraft(Outline outline, TitleOptions titleOptions, Hook hook, Ai ai) {
+        DraftPost draft = ai
                 .withLlm(LlmOptions.withDefaults().withMaxTokens(16384))
                 .withId("blog-post-draft-writer")
                 .withPromptContributors(List.of(Personas.WRITER, Personas.JSON_OUTPUT))
                 .creating(DraftPost.class)
                 .fromPrompt("""
-                        Write a blog post about: %s
+                        Write the body of a blog post that continues on from this opening
+                        paragraph, covering each section in order:
 
-                        Use the following research to inform your writing:
+                        Title: %s
+                        Opening paragraph (already written, repeat it verbatim as the start
+                        of content, then continue): %s
+                        Sections to cover: %s
+
+                        Research to draw on:
                         %s
 
                         Keep it practical and beginner friendly.
                         Use short sentences and plain language.
                         Include code examples but keep them short and simple.
-                        Write the content in Markdown.
-                        """.formatted(research.topic(), research.research())
-                );
+                        Write the content in Markdown, using the sections as headings.
+                        """.formatted(
+                        titleOptions.selectedTitle(),
+                        hook.openingParagraph(),
+                        String.join(", ", outline.sections()),
+                        outline.researchSummary()
+                ));
+
+        // The title was already decided in generateTitleOptions; keep it authoritative
+        // rather than trusting the drafting call to repeat it verbatim.
+        return new DraftPost(titleOptions.selectedTitle(), draft.content());
     }
 
     /**
