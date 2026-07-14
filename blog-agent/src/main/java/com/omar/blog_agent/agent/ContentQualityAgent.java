@@ -40,5 +40,46 @@ public class ContentQualityAgent {
         this.readabilityTool = readabilityTool;
     }
 
+    /**
+     * Verifies the technical claims made in a draft against web sources.
+     *
+     * <p>Deliberately checks the draft (before review) rather than the
+     * final post, so anything flagged here can still be corrected in
+     * {@link BlogWriterAgent#reviewDraft} before publication.</p>
+     *
+     * @param draft the output of {@link BlogWriterAgent#writeDraft}
+     * @param ai    Embabel's fluent LLM access point
+     * @return one verdict per checked claim, plus a convenience flag if any need attention
+     */
+    @Action(description = "Verify technical claims in the draft against known sources")
+    public FactCheckReport factCheckDraft(DraftPost draft, Ai ai) {
+        FactCheckReport report = ai
+                .withDefaultLlm()
+                .withToolGroup(CoreToolGroups.WEB)
+                .withId("blog-post-fact-checker")
+                .withPromptContributors(List.of(Personas.FACT_CHECKER, Personas.JSON_OUTPUT))
+                .creating(FactCheckReport.class)
+                .fromPrompt("""
+                        Identify the specific technical or factual claims in this draft
+                        (version numbers, API behavior, benchmarks, historical/attribution
+                        claims, etc. — skip pure opinion or style statements).
+
+                        For each claim, use web search to verify it, then record a verdict
+                        of VERIFIED, UNVERIFIED, or INCORRECT with a short explanation.
+                        Limit yourself to at most 5 of the most significant claims and no
+                        more than 3 web searches total to avoid rate limiting.
+
+                        Title: %s
+                        Content:
+                        %s
+                        """.formatted(draft.title(), draft.content())
+                );
+
+        boolean hasIssues = report.findings().stream()
+                .anyMatch(finding -> !"VERIFIED".equalsIgnoreCase(finding.verdict()));
+
+        return new FactCheckReport(report.findings(), hasIssues);
+    }
+
 
 }
