@@ -151,6 +151,35 @@ public class BlogWriterAgent {
     }
 
     /**
+     * Step 4: writes the opening paragraph, treated as its own focused task
+     * rather than left to chance inside the full draft prompt.
+     *
+     * @param outline      the output of {@link #createOutline}
+     * @param titleOptions the output of {@link #generateTitleOptions}
+     * @param ai           Embabel's fluent LLM access point
+     * @return the post's opening paragraph
+     */
+    @Action(description = "Write a hook: an engaging opening paragraph that pulls readers in")
+    public Hook writeHook(Outline outline, TitleOptions titleOptions, Ai ai) {
+        return ai
+                .withDefaultLlm()
+                .withId("blog-hook-writer")
+                .withPromptContributors(List.of(Personas.WRITER, Personas.JSON_OUTPUT))
+                .creating(Hook.class)
+                .fromPrompt("""
+                        Title: %s
+                        Angle: %s
+
+                        Write a single opening paragraph (2-4 sentences) that hooks a
+                        developer reader immediately: lead with a relatable problem,
+                        a surprising fact, or a sharp claim tied to the angle above.
+                        Do not summarize the whole post here, just earn the next sentence.
+                        No heading, just the paragraph text.
+                        """.formatted(titleOptions.selectedTitle(), outline.angle())
+                );
+    }
+
+    /**
      * Step 2: writes a beginner-friendly first draft from the research.
      *
      * @param research the output of {@link #researchTopic}
