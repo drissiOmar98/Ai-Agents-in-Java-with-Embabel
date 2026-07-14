@@ -89,6 +89,39 @@ public class BlogWriterAgent {
     }
 
     /**
+     * Step 2: turns raw research into a structured outline &mdash; an angle
+     * plus an ordered list of sections &mdash; before any prose is written.
+     *
+     * <p>Committing to structure first keeps the eventual draft on-topic
+     * instead of wandering, and gives {@link #generateTitleOptions} and
+     * {@link #writeHook} a concrete plan to react to.</p>
+     *
+     * @param research the output of {@link #researchTopic}
+     * @param ai       Embabel's fluent LLM access point
+     * @return the post's angle and section structure
+     */
+    @Action(description = "Create a structured outline before drafting")
+    public Outline createOutline(ResearchedTopic research, Ai ai) {
+        return ai
+                .withDefaultLlm()
+                .withId("blog-outline-writer")
+                .withPromptContributors(List.of(Personas.STRATEGIST, Personas.JSON_OUTPUT))
+                .creating(Outline.class)
+                .fromPrompt("""
+                        Plan a blog post about: %s
+
+                        Research findings:
+                        %s
+
+                        Decide on a specific angle or thesis for the post (not just the
+                        general topic), and break it into an ordered list of section
+                        headings that a reader could skim to understand the post's flow.
+                        Carry the research summary forward unchanged in researchSummary.
+                        """.formatted(research.topic(), research.research())
+                );
+    }
+
+    /**
      * Step 2: writes a beginner-friendly first draft from the research.
      *
      * @param research the output of {@link #researchTopic}
