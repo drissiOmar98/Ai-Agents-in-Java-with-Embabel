@@ -81,5 +81,36 @@ public class ContentQualityAgent {
         return new FactCheckReport(report.findings(), hasIssues);
     }
 
+    /**
+     * Scores the reviewed post's readability and suggests concrete
+     * simplifications, grounded in a deterministically computed Flesch
+     * Reading Ease score rather than an LLM guess.
+     *
+     * @param post the output of {@link BlogWriterAgent#reviewDraft}
+     * @param ai   Embabel's fluent LLM access point
+     * @return the reading level, numeric score, and simplification suggestions
+     */
+    @Action(description = "Evaluate reading level and suggest simplifications")
+    public ReadabilityReport scoreReadability(ReviewedPost post, Ai ai) {
+        return ai
+                .withDefaultLlm()
+                .withToolObject(readabilityTool)
+                .withId("blog-post-readability-scorer")
+                .withPromptContributors(List.of(Personas.READABILITY_EDITOR, Personas.JSON_OUTPUT))
+                .creating(ReadabilityReport.class)
+                .fromPrompt("""
+                        Use the calculateReadability tool on the content below to compute
+                        its Flesch Reading Ease score and level label. Put the exact numeric
+                        score into fleschReadingEase and the exact level label into readingLevel.
 
+                        Then suggest up to 5 concrete simplifications (shorter sentences,
+                        simpler words, breaking up dense paragraphs) targeted at the
+                        densest or most jargon-heavy parts of the post. Be specific about
+                        which part of the post each suggestion applies to.
+
+                        Content:
+                        %s
+                        """.formatted(post.content())
+                );
+    }
 }
