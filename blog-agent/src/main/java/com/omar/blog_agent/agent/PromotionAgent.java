@@ -25,5 +25,41 @@ import java.util.List;
 @Agent(description = "Generate a hero image prompt and social media promotion copy for a blog post")
 public class PromotionAgent {
 
+    /**
+     * Writes an image-generation prompt (plus accessibility alt text) for
+     * the post's hero/thumbnail image.
+     *
+     * <p>Runs on {@link FinalPost} (before front matter is added) so
+     * {@link BlogWriterAgent#addFrontMatter} can embed the result directly
+     * into the front matter block.</p>
+     *
+     * @param post the output of {@link BlogWriterAgent#addTldr}
+     * @param ai   Embabel's fluent LLM access point
+     * @return a detailed image-generation prompt and matching alt text
+     */
+    @Action(description = "Write an image generation prompt for the post's hero image")
+    public ThumbnailPrompt generateThumbnailPrompt(FinalPost post, Ai ai) {
+        return ai
+                .withDefaultLlm()
+                .withId("blog-post-thumbnail-writer")
+                .withPromptContributors(List.of(Personas.JSON_OUTPUT))
+                .creating(ThumbnailPrompt.class)
+                .fromPrompt("""
+                        Write a detailed image-generation prompt for a hero/thumbnail
+                        image for this blog post. Describe composition, style (e.g. flat
+                        vector illustration, isometric, minimalist), color palette, and
+                        any symbolic elements tied to the topic. Avoid any embedded text
+                        in the image and avoid depicting real, named people.
+
+                        Also write concise accessibility alt text (under 125 characters)
+                        describing the intended image.
+
+                        Title: %s
+                        Content:
+                        %s
+                        """.formatted(post.title(), post.content())
+                );
+    }
+
 
 }
