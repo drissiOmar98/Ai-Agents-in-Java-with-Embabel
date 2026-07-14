@@ -61,5 +61,41 @@ public class PromotionAgent {
                 );
     }
 
+    /**
+     * Generates promotional copy for sharing the published post on
+     * Twitter/X and LinkedIn.
+     *
+     * <p>Marked as its own {@link AchievesGoal} since promotion is a
+     * useful deliverable independent of publishing &mdash; Embabel can
+     * satisfy this goal once {@link BlogWriterAgent#addFrontMatter} has
+     * produced a {@link PublishedPost}, without every run needing to
+     * request social copy explicitly.</p>
+     *
+     * @param post the output of {@link BlogWriterAgent#addFrontMatter}
+     * @param ai   Embabel's fluent LLM access point
+     * @return a Twitter/X post and a LinkedIn post promoting the article
+     */
+    @AchievesGoal(description = "Social media promotion snippets for a published post")
+    @Action(description = "Write social media posts to promote the article")
+    public SocialPosts generateSocialPosts(PublishedPost post, Ai ai) {
+        return ai
+                .withDefaultLlm()
+                .withId("blog-post-social-writer")
+                .withPromptContributors(List.of(Personas.SOCIAL_MEDIA_MANAGER, Personas.JSON_OUTPUT))
+                .creating(SocialPosts.class)
+                .fromPrompt("""
+                        Write two promotional posts for this article, aimed at developers.
 
+                        Twitter/X post: under 280 characters, punchy, one concrete hook or
+                        takeaway, no more than 2 hashtags.
+
+                        LinkedIn post: 3-5 short paragraphs, more context and a professional
+                        tone, ending with a question or call to action to read the full post.
+
+                        Title: %s
+                        Content:
+                        %s
+                        """.formatted(post.title(), post.content())
+                );
+    }
 }
