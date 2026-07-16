@@ -227,18 +227,27 @@ public class BlogWriterAgent {
     }
 
     /**
-     * Step 3: reviews the draft for technical accuracy and tightens the prose.
+     * Step 6: reviews the draft for technical accuracy and tightens the
+     * prose, taking the fact-check findings from
+     * {@link ContentQualityAgent#factCheckDraft} into account so flagged
+     * claims get corrected rather than just noted.
      *
      * <p>Uses the {@code reviewer} LLM role (configured separately from the
      * default model in {@code application.yml}) so review quality can be
      * tuned independently of drafting.</p>
      *
-     * @param draft the output of {@link #writeDraft}
-     * @param ai    Embabel's fluent LLM access point
+     * @param draft           the output of {@link #writeDraft}
+     * @param factCheckReport the output of {@link ContentQualityAgent#factCheckDraft}
+     * @param ai              Embabel's fluent LLM access point
      * @return the revised title and content plus a summary of the changes made
      */
-    @Action(description = "Review and improve the draft")
-    public ReviewedPost reviewDraft(DraftPost draft, Ai ai) {
+    @Action(description = "Review and improve the draft, correcting any fact-check issues")
+    public ReviewedPost reviewDraft(DraftPost draft, FactCheckReport factCheckReport, Ai ai) {
+        String issues = factCheckReport.findings().stream()
+                .filter(finding -> !"VERIFIED".equalsIgnoreCase(finding.verdict()))
+                .map(finding -> "- [%s] %s — %s".formatted(finding.verdict(), finding.claim(), finding.explanation()))
+                .collect(Collectors.joining("\n"));
+
         return ai
                 .withLlm(LlmOptions.withLlmForRole("reviewer").withMaxTokens(16384))
                 .withId("blog-post-reviewer")
@@ -249,11 +258,18 @@ public class BlogWriterAgent {
                         Content:
                         %s
 
-                        Fix any technical errors. Tighten the writing.
+                        Fact-check findings to address (empty means nothing flagged):
+                        %s
+
+                        Fix any technical errors, including anything flagged above.
+                        Tighten the writing.
                         Provide the revised title, revised content, and a brief
                         summary of the changes you made as feedback.
-                        """.formatted(draft.title(), draft.content())
-                );
+                        """.formatted(
+                        draft.title(),
+                        draft.content(),
+                        issues.isBlank() ? "(none)" : issues
+                ));
     }
 
     /**
