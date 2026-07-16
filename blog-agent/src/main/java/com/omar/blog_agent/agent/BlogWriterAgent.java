@@ -273,7 +273,7 @@ public class BlogWriterAgent {
     }
 
     /**
-     * Step 4: generates a one- or two-sentence TLDR and prepends it as a
+     * Step 7: generates a one- or two-sentence TLDR and prepends it as a
      * Markdown blockquote above the reviewed content.
      *
      * @param post the output of {@link #reviewDraft}
@@ -301,22 +301,27 @@ public class BlogWriterAgent {
     }
 
     /**
-     * Step 5 (goal): generates YAML front matter, prepends it to the post,
-     * writes the finished Markdown file to disk, and returns the published
-     * post. This is the action Embabel treats as achieving the agent's goal.
+     * Step 8 (goal): generates YAML front matter (including the hero image
+     * prompt and reading level surfaced by the side agents), prepends it to
+     * the post, writes the finished Markdown file to disk, and returns the
+     * published post. This is the action Embabel treats as achieving the
+     * agent's primary goal.
      *
      * <p>The LLM is given the {@link ReadingStatsTool} so it computes an
      * accurate read time rather than estimating one itself.</p>
      *
-     * @param post the output of {@link #addTldr}
-     * @param ai   Embabel's fluent LLM access point
+     * @param post              the output of {@link #addTldr}
+     * @param thumbnailPrompt   the output of {@link PromotionAgent#generateThumbnailPrompt}
+     * @param readabilityReport the output of {@link ContentQualityAgent#scoreReadability}
+     * @param ai                Embabel's fluent LLM access point
      * @return the fully published post, including front matter
      */
     @AchievesGoal(description = "A reviewed and polished blog post with front matter")
     @Action(description = "Add front matter to the top of the blog post")
-    public PublishedPost addFrontMatter(FinalPost post, Ai ai) {
+    public PublishedPost addFrontMatter(FinalPost post, ThumbnailPrompt thumbnailPrompt,
+                                        ReadabilityReport readabilityReport, Ai ai) {
         FrontMatter frontMatter = generateFrontMatter(post, ai);
-        String frontMatterBlock = renderFrontMatterBlock(post, frontMatter);
+        String frontMatterBlock = renderFrontMatterBlock(post, frontMatter, thumbnailPrompt, readabilityReport);
 
         String contentWithFrontMatter = frontMatterBlock + "\n" + post.content();
         PublishedPost publishedPost = new PublishedPost(post.title(), contentWithFrontMatter, post.feedback());
@@ -324,6 +329,7 @@ public class BlogWriterAgent {
         writeToFile(publishedPost);
         return publishedPost;
     }
+
 
     /**
      * Asks the LLM for front matter metadata (description, tags, keywords,
@@ -355,14 +361,17 @@ public class BlogWriterAgent {
     }
 
     /**
-     * Renders the YAML front matter block for a post, from its title and
-     * generated metadata.
+     * Renders the YAML front matter block for a post, from its title,
+     * generated metadata, hero image details, and readability score.
      *
-     * @param post        the post being published, used for its title
-     * @param frontMatter the generated metadata to render
+     * @param post              the post being published, used for its title
+     * @param frontMatter       the generated metadata to render
+     * @param thumbnailPrompt   hero image prompt/alt text to include
+     * @param readabilityReport readability score/level to include
      * @return the complete {@code ---}-delimited YAML front matter block
      */
-    private String renderFrontMatterBlock(FinalPost post, FrontMatter frontMatter) {
+    private String renderFrontMatterBlock(FinalPost post, FrontMatter frontMatter,
+                                          ThumbnailPrompt thumbnailPrompt, ReadabilityReport readabilityReport) {
         String slug = Slugs.slugify(post.title());
 
         String tags = frontMatter.tags().stream()
@@ -382,6 +391,9 @@ public class BlogWriterAgent {
                 description: "%s"
                 author: "Dan Vega"
                 readTime: "%s"
+                readingLevel: "%s (Flesch %d)"
+                heroImagePrompt: "%s"
+                heroImageAlt: "%s"
                 tags:
                 %s
                 keywords:
@@ -393,10 +405,15 @@ public class BlogWriterAgent {
                 LocalDate.now(),
                 frontMatter.description(),
                 frontMatter.readTime(),
+                readabilityReport.readingLevel(),
+                readabilityReport.fleschReadingEase(),
+                thumbnailPrompt.imagePrompt().replace("\"", "\\\""),
+                thumbnailPrompt.altText().replace("\"", "\\\""),
                 tags,
                 keywords
         );
     }
+
 
     /**
      * Writes a post's content to {@code <output-dir>/<slugified-title>.md},
