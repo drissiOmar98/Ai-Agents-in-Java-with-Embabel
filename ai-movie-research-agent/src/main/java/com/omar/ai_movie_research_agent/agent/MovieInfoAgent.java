@@ -88,5 +88,29 @@ public class MovieInfoAgent {
                 );
     }
 
+    /**
+     * Identifies the movie's principal cast, capped at
+     * {@link CineScoutProperties#maxActors()} to keep the result focused on
+     * the most notable names rather than a full credits list.
+     *
+     * @param userInput the user's free-text request
+     * @param context   Embabel's operation context, providing access to the LLM
+     * @return the movie's principal cast, most notable first
+     */
+    @Action
+    public MovieActors getMovieActors(UserInput userInput, OperationContext context) {
+        return context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        Extract the movie name from this user input: %s
+                        Then identify its %d most notable principal cast members,
+                        most notable first.
+                        Create a MovieActors from that cast list.
+                        """.formatted(userInput.getContent(), properties.maxActors()),
+                        MovieActors.class
+                );
+    }
+
 
 }
