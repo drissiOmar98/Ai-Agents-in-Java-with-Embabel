@@ -1,3 +1,15 @@
 spring:
   application:
-    name: ai-movie-research-agent
+    name: cinescout
+
+# Bound to com.cinescout.config.CineScoutProperties
+cinescout:
+  max-actors: 5          # cast members returned per movie
+  max-similar-movies: 3  # recommendations generated per movie
+
+embabel:
+  agent:
+    logging:
+      personality: starwars   # cosmetic: flavors Embabel's console log output
+  models:
+    default-llm: claude-sonnet-4-6
