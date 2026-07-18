@@ -162,5 +162,47 @@ public class MovieInfoAgent {
                 );
     }
 
+    /**
+     * Assembles the complete {@link Movie} profile: looks up the director
+     * (the one lookup that depends on the already-resolved
+     * {@link MovieBasicInfo} rather than the raw user input, to reduce
+     * ambiguity) and combines it with every other resolved fact.
+     *
+     * <p>This is the pipeline's primary goal. A secondary goal,
+     * {@link #getSimilarMovies}, can subsequently be reached from its
+     * output.</p>
+     *
+     * @param basicInfo the movie's resolved title and release date
+     * @param actors    the movie's principal cast
+     * @param genres    the movie's genre classification(s)
+     * @param plot      a spoiler-free plot synopsis
+     * @param context   Embabel's operation context, providing access to the LLM
+     * @return the fully assembled movie profile
+     * @throws MovieDataUnavailableException if no director could be resolved for the movie
+     */
+    @AchievesGoal(description = "Provides a complete movie profile for the given movie name")
+    @Action
+    public Movie getMovieInfo(MovieBasicInfo basicInfo, MovieActors actors,
+                               MovieGenres genres, MoviePlotSummary plot, OperationContext context) {
+        MovieDirector director = context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        Identify the director of the movie: %s.
+                        Create a MovieDirector from that info.
+                        """.formatted(basicInfo.name()),
+                        MovieDirector.class
+                );
+
+        if (director == null) {
+            throw new MovieDataUnavailableException(
+                    "Could not resolve a director for movie: " + basicInfo.name());
+        }
+
+        Movie movie = new Movie(basicInfo, director, actors, genres, plot);
+        log.info("Assembled movie profile: {}", movie.name());
+        return movie;
+    }
+
 
 }
