@@ -133,5 +133,34 @@ public class MovieInfoAgent {
                 );
     }
 
+    /**
+     * Writes a short, spoiler-free plot synopsis.
+     *
+     * <p>Uses the {@link Personas#FILM_CRITIC} persona so the summary reads
+     * like an engaging critic's blurb rather than a dry plot dump, and is
+     * explicitly instructed to stop at the premise rather than describe the
+     * ending.</p>
+     *
+     * @param userInput the user's free-text request
+     * @param context   Embabel's operation context, providing access to the LLM
+     * @return a 2-3 sentence, spoiler-free synopsis
+     */
+    @Action(description = "Write a short, spoiler-free plot summary")
+    public MoviePlotSummary getPlotSummary(UserInput userInput, OperationContext context) {
+        return context.ai()
+                .withDefaultLlm()
+                .withPromptContributors(List.of(Personas.FILM_CRITIC))
+                .createObjectIfPossible(
+                        """
+                        Extract the movie name from this user input: %s
+                        Then write a 2-3 sentence synopsis of its premise.
+                        Cover only the setup - do not reveal plot twists, the ending,
+                        or any major turning points.
+                        Create a MoviePlotSummary from that synopsis.
+                        """.formatted(userInput.getContent()),
+                        MoviePlotSummary.class
+                );
+    }
+
 
 }
