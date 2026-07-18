@@ -112,5 +112,26 @@ public class MovieInfoAgent {
                 );
     }
 
+    /**
+     * Identifies the movie's genre classification(s).
+     *
+     * @param userInput the user's free-text request
+     * @param context   Embabel's operation context, providing access to the LLM
+     * @return the movie's genres, primary genre first
+     */
+    @Action
+    public MovieGenres getMovieGenres(UserInput userInput, OperationContext context) {
+        return context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        Extract the movie name from this user input: %s
+                        Then identify its genre classification(s), primary genre first.
+                        Create a MovieGenres from that list.
+                        """.formatted(userInput.getContent()),
+                        MovieGenres.class
+                );
+    }
+
 
 }
