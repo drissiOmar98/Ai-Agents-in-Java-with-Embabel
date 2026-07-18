@@ -1,0 +1,65 @@
+package com.omar.ai_movie_research_agent.agent;
+
+
+import com.embabel.agent.api.annotation.AchievesGoal;
+import com.embabel.agent.api.annotation.Action;
+import com.embabel.agent.api.annotation.Agent;
+import com.embabel.agent.api.common.OperationContext;
+import com.embabel.agent.domain.io.UserInput;
+import com.omar.ai_movie_research_agent.config.CineScoutProperties;
+import com.omar.ai_movie_research_agent.exception.MovieDataUnavailableException;
+import com.omar.ai_movie_research_agent.model.*;
+import com.omar.ai_movie_research_agent.persona.Personas;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.List;
+
+/**
+ * Embabel agent that turns a free-text movie request into a fully assembled
+ * {@link Movie} profile, and can go on to recommend similar movies.
+ *
+ * <p>Each lookup (basic info, cast, genres, plot, director) is its own
+ * independent {@link Action}, run against the same {@link UserInput} or
+ * previously resolved facts. Embabel's planner resolves the dependency
+ * graph from each method's parameter types and executes them in the
+ * order needed to reach the requested goal &mdash; there is no manually
+ * sequenced control flow here.</p>
+ *
+ * <p>Pipeline shape:</p>
+ *
+ * <pre>
+ * UserInput
+ *   ├──&gt; getMovieBasicInfo   -&gt; MovieBasicInfo
+ *   ├──&gt; getMovieActors      -&gt; MovieActors
+ *   ├──&gt; getMovieGenres      -&gt; MovieGenres
+ *   └──&gt; getPlotSummary      -&gt; MoviePlotSummary
+ *            │
+ *            ▼
+ *   getMovieInfo (+ director lookup)  🎯 GOAL  -&gt; Movie
+ *            │
+ *            ▼
+ *   getSimilarMovies                  🎯 GOAL  -&gt; MovieRecommendations
+ * </pre>
+ */
+@Agent(
+        name = "movie-info-provider",
+        description = "Researches a movie and provides a complete profile, including similar-movie recommendations",
+        version = "2.0.0",
+        beanName = "movieInfoProviderAgent"
+)
+public class MovieInfoAgent {
+
+    private static final Logger log = LoggerFactory.getLogger(MovieInfoAgent.class);
+
+    private final CineScoutProperties properties;
+
+    /**
+     * @param properties bound {@code cinescout.*} configuration (max actors, max recommendations)
+     */
+    public MovieInfoAgent(CineScoutProperties properties) {
+        this.properties = properties;
+    }
+
+
+}
