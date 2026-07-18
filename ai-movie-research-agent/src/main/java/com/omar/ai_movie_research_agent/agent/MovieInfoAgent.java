@@ -61,5 +61,32 @@ public class MovieInfoAgent {
         this.properties = properties;
     }
 
+    /**
+     * Extracts the movie's core identity (title and release date) from the
+     * user's free-text request.
+     *
+     * <p>This is the anchor fact for the rest of the pipeline: every other
+     * lookup either re-reads the raw {@link UserInput} directly (cast,
+     * genres, plot) or depends on this resolved identity (director, via
+     * {@link #getMovieInfo}) to avoid ambiguity with similarly named
+     * films.</p>
+     *
+     * @param userInput the user's free-text request, e.g. {@code "Tell me about Inception"}
+     * @param context   Embabel's operation context, providing access to the LLM
+     * @return the movie's title and release date
+     */
+    @Action
+    public MovieBasicInfo getMovieBasicInfo(UserInput userInput, OperationContext context) {
+        log.debug("Resolving basic info for input: {}", userInput.getContent());
+        return context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        Create a MovieBasicInfo from this user input, extracting their details:
+                        %s""".formatted(userInput.getContent()),
+                        MovieBasicInfo.class
+                );
+    }
+
 
 }
