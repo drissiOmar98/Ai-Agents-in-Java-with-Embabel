@@ -204,5 +204,49 @@ public class MovieInfoAgent {
         return movie;
     }
 
+    /**
+     * Recommends other movies a viewer might enjoy, based on the completed
+     * {@link Movie} profile's theme, genre, director, and tone.
+     *
+     * <p>Marked as its own {@link AchievesGoal} since recommendations are a
+     * useful deliverable on their own, reachable once a {@link Movie} has
+     * been assembled &mdash; a caller can request just the profile, just the
+     * recommendations (which pulls in the profile as a dependency), or
+     * both.</p>
+     *
+     * @param movie   the fully assembled movie profile from {@link #getMovieInfo}
+     * @param context Embabel's operation context, providing access to the LLM
+     * @return recommended similar movies, capped at
+     *         {@link CineScoutProperties#maxSimilarMovies()}, with a brief rationale
+     */
+    @AchievesGoal(description = "Recommends similar movies based on a movie's profile")
+    @Action(description = "Suggest similar movies a viewer might enjoy")
+    public MovieRecommendations getSimilarMovies(Movie movie, OperationContext context) {
+        return context.ai()
+                .withDefaultLlm()
+                .withPromptContributors(List.of(Personas.FILM_CRITIC))
+                .createObjectIfPossible(
+                        """
+                        A viewer enjoyed this movie:
 
+                        Title: %s
+                        Genres: %s
+                        Director: %s
+                        Plot: %s
+
+                        Recommend up to %d other movies they would likely enjoy, based on
+                        shared theme, genre, director style, or tone. Do not recommend the
+                        movie itself or any of its direct sequels/prequels.
+                        Briefly explain what ties the recommendations together.
+                        Create a MovieRecommendations from that list and explanation.
+                        """.formatted(
+                                movie.name(),
+                                String.join(", ", movie.genres()),
+                                movie.director(),
+                                movie.plotSummary(),
+                                properties.maxSimilarMovies()
+                        ),
+                        MovieRecommendations.class
+                );
+    }
 }
