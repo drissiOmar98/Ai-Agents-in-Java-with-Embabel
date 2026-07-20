@@ -97,5 +97,41 @@ public class ApplicationAgent {
                 );
     }
 
+    /**
+     * Extracts the candidate's profile from the candidate-background
+     * portion of the user's input.
+     *
+     * @param userInput free-text input expected to contain both the job
+     *                  posting and the candidate's background
+     * @param context   Embabel's operation context, providing access to the LLM
+     * @return the candidate's skills, experience level, and background summary
+     * @throws CandidateProfileIncompleteException if no candidate skills could be identified at all
+     */
+    @Action
+    public CandidateProfile extractCandidateProfile(UserInput userInput, OperationContext context) {
+        CandidateProfile profile = context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        The following text contains a candidate's background, possibly
+                        alongside a job posting. Extract only the candidate's details:
+
+                        %s
+
+                        Identify their skills/technologies, a short free-text description
+                        of their experience level, and a concise summary of their
+                        professional background.
+                        Create a CandidateProfile from these details.
+                        """.formatted(userInput.getContent()),
+                        CandidateProfile.class
+                );
+
+        if (profile == null || profile.skills() == null || profile.skills().isEmpty()) {
+            throw new CandidateProfileIncompleteException(
+                    "Could not identify any candidate skills from the submitted background text");
+        }
+        return profile;
+    }
+
 
 }
