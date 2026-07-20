@@ -133,5 +133,40 @@ public class ApplicationAgent {
         return profile;
     }
 
+    /**
+     * Compares the candidate's profile against the job's requirements to
+     * produce a skill match/gap analysis and an overall fit score.
+     *
+     * @param jobRequirements  the output of {@link #extractJobRequirements}
+     * @param candidateProfile the output of {@link #extractCandidateProfile}
+     * @param context          Embabel's operation context, providing access to the LLM
+     * @return matching skills, missing skills, a fit score, and a brief assessment
+     */
+    @Action
+    public CandidateMatch matchCandidateProfile(JobRequirements jobRequirements,
+                                                  CandidateProfile candidateProfile, OperationContext context) {
+        return context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        Job requires: %s (required), %s (nice-to-have), seniority: %s
+                        Candidate has: %s (%s)
+
+                        Identify which candidate skills satisfy a required or nice-to-have
+                        skill, which required/nice-to-have skills the candidate does not
+                        demonstrate, an honest overall fit score from 0-100, and a brief
+                        assessment explaining that score.
+                        Create a CandidateMatch from this analysis.
+                        """.formatted(
+                                String.join(", ", jobRequirements.requiredSkills()),
+                                String.join(", ", jobRequirements.niceToHaveSkills()),
+                                jobRequirements.seniorityLevel(),
+                                String.join(", ", candidateProfile.skills()),
+                                candidateProfile.yearsOfExperience()
+                        ),
+                        CandidateMatch.class
+                );
+    }
+
 
 }
