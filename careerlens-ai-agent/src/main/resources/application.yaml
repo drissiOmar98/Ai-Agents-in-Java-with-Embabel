@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: careerlens-ai-agent
+
+# Bound to com.careerforge.config.CareerForgeProperties
+career-forge:
+  max-resume-bullets: 5         # tailored resume bullets generated
+  max-interview-questions: 6    # questions generated per category (technical/behavioral)
+  target-ats-match-percent: 70  # "good" ATS coverage threshold referenced when writing the cover letter
+
+embabel:
+  agent:
+    logging:
+      personality: starwars   # cosmetic: flavors Embabel's console log output
+  models:
+    default-llm: claude-sonnet-4-6
+
