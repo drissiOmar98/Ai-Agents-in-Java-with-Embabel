@@ -203,5 +203,55 @@ public class ApplicationAgent {
                 );
     }
 
+    /**
+     * Writes the final cover letter, informed by the ATS scoring report so
+     * currently-missing keywords can be naturally worked in where they
+     * genuinely apply to the candidate's real experience.
+     *
+     * <p>This is the pipeline's primary goal.</p>
+     *
+     * @param resumeHighlights the output of {@link #tailorResumeHighlights}
+     * @param atsScoreReport   the output of {@link ApplicationQualityAgent#scoreAtsMatch}
+     * @param jobRequirements  the output of {@link #extractJobRequirements}
+     * @param context          Embabel's operation context, providing access to the LLM
+     * @return the complete, ready-to-send cover letter
+     */
+    @AchievesGoal(description = "A tailored cover letter, informed by resume highlights and ATS keyword coverage")
+    @Action
+    public CoverLetter writeCoverLetter(ResumeHighlights resumeHighlights, AtsScoreReport atsScoreReport,
+                                          JobRequirements jobRequirements, OperationContext context) {
+        String missingKeywords = atsScoreReport.missingKeywords().isEmpty()
+                ? "(none - good keyword coverage already)"
+                : String.join(", ", atsScoreReport.missingKeywords());
 
+        CoverLetter coverLetter = context.ai()
+                .withDefaultLlm()
+                .withPromptContributors(List.of(Personas.CAREER_COACH))
+                .createObjectIfPossible(
+                        """
+                        Write a cover letter for the %s position at %s.
+
+                        Resume highlights to draw on:
+                        %s
+
+                        Currently under-represented keywords for this role (work these in
+                        naturally only where they honestly reflect the candidate's real
+                        experience above - do not fabricate experience just to hit a keyword):
+                        %s
+
+                        Keep it to 3-4 paragraphs, professional but not generic, and avoid
+                        cliches like "I am excited to apply".
+                        Create a CoverLetter from the content.
+                        """.formatted(
+                                jobRequirements.jobTitle(),
+                                jobRequirements.company(),
+                                String.join("\n", resumeHighlights.bullets()),
+                                missingKeywords
+                        ),
+                        CoverLetter.class
+                );
+
+        log.info("Cover letter generated for {} at {}", jobRequirements.jobTitle(), jobRequirements.company());
+        return coverLetter;
+    }
 }
