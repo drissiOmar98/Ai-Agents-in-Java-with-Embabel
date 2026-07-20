@@ -68,5 +68,34 @@ public class ApplicationAgent {
         this.properties = properties;
     }
 
+    /**
+     * Extracts structured requirements from the job posting portion of the
+     * user's input.
+     *
+     * @param userInput free-text input expected to contain both the job
+     *                  posting and the candidate's background
+     * @param context   Embabel's operation context, providing access to the LLM
+     * @return the job's title, company, required/nice-to-have skills, and seniority level
+     */
+    @Action
+    public JobRequirements extractJobRequirements(UserInput userInput, OperationContext context) {
+        return context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        The following text contains a job posting, possibly alongside a
+                        candidate's background. Extract only the job posting details:
+
+                        %s
+
+                        Identify the job title, company (use "the company" if not named),
+                        explicitly required skills/technologies, nice-to-have/preferred
+                        skills, and the apparent seniority level.
+                        Create a JobRequirements from these details.
+                        """.formatted(userInput.getContent()),
+                        JobRequirements.class
+                );
+    }
+
 
 }
