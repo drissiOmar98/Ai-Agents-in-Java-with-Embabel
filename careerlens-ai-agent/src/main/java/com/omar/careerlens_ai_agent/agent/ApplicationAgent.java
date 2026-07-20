@@ -168,5 +168,40 @@ public class ApplicationAgent {
                 );
     }
 
+    /**
+     * Generates tailored, achievement-oriented resume bullet points that
+     * emphasize the candidate's strongest matches for this specific job.
+     *
+     * @param candidateMatch   the output of {@link #matchCandidateProfile}
+     * @param candidateProfile the output of {@link #extractCandidateProfile}, for background context
+     * @param context          Embabel's operation context, providing access to the LLM
+     * @return tailored resume bullet points, capped at
+     *         {@link CareerForgeProperties#maxResumeBullets()}
+     */
+    @Action
+    public ResumeHighlights tailorResumeHighlights(CandidateMatch candidateMatch,
+                                                   CandidateProfile candidateProfile, OperationContext context) {
+        return context.ai()
+                .withDefaultLlm()
+                .withPromptContributors(List.of(Personas.CAREER_COACH))
+                .createObjectIfPossible(
+                        """
+                        Candidate background: %s
+                        Matching skills for this role: %s
+
+                        Write up to %d resume bullet points that highlight the candidate's
+                        real experience, emphasizing the matching skills above. Use
+                        specific, achievement-oriented language. Do not invent experience,
+                        metrics, or accomplishments the candidate did not mention.
+                        Create a ResumeHighlights from these bullets.
+                        """.formatted(
+                                candidateProfile.background(),
+                                String.join(", ", candidateMatch.matchingSkills()),
+                                properties.maxResumeBullets()
+                        ),
+                        ResumeHighlights.class
+                );
+    }
+
 
 }
