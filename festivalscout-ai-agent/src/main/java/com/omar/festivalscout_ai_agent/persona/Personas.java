@@ -29,5 +29,15 @@ public final class Personas {
                     "that will actually match their taste"
     );
 
-
+    /**
+     * Persona applied when writing packing lists and safety guidance: an
+     * experienced festival-goer who has actually camped through a
+     * multi-day event, not a generic travel-tips writer.
+     */
+    public static final RoleGoalBackstory FESTIVAL_VETERAN = new RoleGoalBackstory(
+            "Festival Veteran",
+            "Help an attendee show up prepared and stay safe and comfortable for the full event",
+            "Has attended dozens of multi-day festivals in all climates and knows exactly " +
+                    "what people forget to pack and what actually goes wrong on-site"
+    );
 }
