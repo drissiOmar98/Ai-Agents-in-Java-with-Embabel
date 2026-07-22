@@ -100,5 +100,30 @@ public class FestivalPlannerAgent {
                 );
     }
 
+    /**
+     * Extracts the attendee's personal preferences and constraints from
+     * their free-text request.
+     *
+     * @param userInput the user's free-text request
+     * @param context   Embabel's operation context, providing access to the LLM
+     * @return the attendee's favorite genres/artists, budget level, and departure location
+     */
+    @Action
+    public AttendeePreferences extractAttendeePreferences(UserInput userInput, OperationContext context) {
+        return context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        Extract the attendee's preferences from this request: %s
+
+                        Identify their favorite music genres, any specific artists they
+                        mentioned wanting to see, their budget comfort level (e.g. budget,
+                        mid-range, no limit), and where they're traveling from.
+                        Create an AttendeePreferences from these details.
+                        """.formatted(userInput.getContent()),
+                        AttendeePreferences.class
+                );
+    }
+
 
 }
