@@ -213,5 +213,66 @@ public class FestivalPlannerAgent {
                 );
     }
 
+    /**
+     * Builds the final day-by-day itinerary from the attendee's must-see
+     * picks, resolving any time conflicts flagged by
+     * {@link ScheduleQualityAgent#checkScheduleConflicts} rather than
+     * leaving the attendee to discover a double-booking on-site.
+     *
+     * <p>This is the pipeline's primary goal.</p>
+     *
+     * @param mustSeePicks    the output of {@link #pickMustSeeArtists}
+     * @param conflictReport  the output of {@link ScheduleQualityAgent#checkScheduleConflicts}
+     * @param festivalInfo    the output of {@link #extractFestivalInfo}
+     * @param context         Embabel's operation context, providing access to the LLM
+     * @return a conflict-free, day-by-day festival itinerary
+     */
+    @AchievesGoal(description = "A personalized, conflict-free day-by-day festival itinerary")
+    @Action
+    public FestivalItinerary buildItinerary(MustSeePicks mustSeePicks, ScheduleConflictReport conflictReport,
+                                            FestivalBasicInfo festivalInfo, OperationContext context) {
+        String conflictNote = conflictReport.hasConflicts()
+                ? String.join("; ", conflictReport.conflicts())
+                : "(none)";
 
+        FestivalItinerary itinerary = context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        Festival: %s (%s to %s)
+
+                        Must-see picks:
+                        %s
+
+                        Detected schedule conflicts to resolve (drop the lower-priority
+                        pick or adjust timing where needed - never leave a listed conflict
+                        unresolved in the final plan):
+                        %s
+
+                        Write one entry per festival day covering the recommended set
+                        schedule in order, plus sensible meal/rest breaks between sets.
+                        Create a FestivalItinerary from these daily plans.
+                        """.formatted(
+                                festivalInfo.festivalName(),
+                                festivalInfo.startDate(),
+                                festivalInfo.endDate(),
+                                formatPicks(mustSeePicks),
+                                conflictNote
+                        ),
+                        FestivalItinerary.class
+                );
+
+        log.info("Itinerary built for {} ({} days)", festivalInfo.festivalName(),
+                itinerary != null ? itinerary.dailyPlans().size() : 0);
+        return itinerary;
+    }
+
+    private String formatPicks(MustSeePicks mustSeePicks) {
+        StringBuilder sb = new StringBuilder();
+        for (ArtistSetPick pick : mustSeePicks.picks()) {
+            sb.append(String.format("- %s | %s | %s | %s-%s | %s%n",
+                    pick.day(), pick.stage(), pick.artist(), pick.startTime(), pick.endTime(), pick.reason()));
+        }
+        return sb.toString();
+    }
 }
