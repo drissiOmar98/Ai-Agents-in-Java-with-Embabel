@@ -3,7 +3,7 @@
 > A multi-agent AI system built in Java with [Embabel](https://github.com/embabel/embabel-agent) and Spring Boot. Tell it which festival you're going to — Tomorrowland, Ultra, or anything else — and it researches the real lineup, builds you a personalized set schedule with conflicts checked, packs your bag, estimates your budget, and keeps you safe.
 
 [![Java](https://img.shields.io/badge/Java-21-orange?logo=openjdk&logoColor=white)](https://openjdk.org/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.x-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Embabel](https://img.shields.io/badge/Embabel-Agent%20Platform-7F77DD)](https://github.com/embabel/embabel-agent)
 [![Maven](https://img.shields.io/badge/Build-Maven-C71A36?logo=apachemaven&logoColor=white)](https://maven.apache.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](#-license)
@@ -12,7 +12,7 @@
 
 ## 📖 Overview
 
-**FestivalScout** is a Java-based AI agent that turns a single free-text request — *"I'm going to Tomorrowland, I love techno and melodic house, traveling from Casablanca on a mid-range budget"* — into a complete festival plan:
+**FestivalScout** is a Java-based AI agent that turns a single free-text request — *"I'm going to Tomorrowland, I love techno and melodic house, traveling from Tunisia on a mid-range budget"* — into a complete festival plan:
 
 - the **actual current lineup**, researched via live web search (not stale training data),
 - a **personalized must-see schedule** matched to your taste,
@@ -146,15 +146,15 @@ festivalscout/
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Language | Java 21 |
-| Application framework | Spring Boot 3.x |
+| Layer | Technology                                          |
+|---|-----------------------------------------------------|
+| Language | Java 21                                             |
+| Application framework | Spring Boot 4.x                                     |
 | Agent framework | [Embabel](https://github.com/embabel/embabel-agent) |
-| LLM integration | Spring AI |
-| Default model | Claude Sonnet |
-| Web research | Embabel's built-in web tool group |
-| Build tool | Maven |
+| LLM integration | Spring AI                                           |
+| Default model | Claude Sonnet                                       |
+| Web research | Embabel's built-in web tool group                   |
+| Build tool | Maven                                               |
 
 ---
 
