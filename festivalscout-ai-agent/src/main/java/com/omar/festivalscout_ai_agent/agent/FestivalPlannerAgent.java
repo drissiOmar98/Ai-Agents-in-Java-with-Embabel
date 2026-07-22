@@ -125,5 +125,44 @@ public class FestivalPlannerAgent {
                 );
     }
 
+    /**
+     * Researches the festival's lineup via web search, grounding the result
+     * in current, real information rather than the model's general
+     * knowledge (which may be stale for a specific year's edition).
+     *
+     * @param festivalInfo the output of {@link #extractFestivalInfo}
+     * @param context      Embabel's operation context, providing access to the LLM
+     * @return the festival's headliners, rising artists, and represented genres
+     * @throws LineupUnavailableException if no headliners could be identified at all
+     */
+    @Action(description = "Research the festival's lineup using web search")
+    public LineupHighlights researchLineup(FestivalBasicInfo festivalInfo, OperationContext context) {
+        LineupHighlights lineup = context.ai()
+                .withDefaultLlm()
+                .withToolGroup(CoreToolGroups.WEB)
+                .createObjectIfPossible(
+                        """
+                        Research the lineup for %s (%s, %s to %s) using web search.
+                        Limit yourself to no more than 3 searches to avoid rate limiting.
+
+                        Identify the headlining artists, notable rising/smaller artists
+                        worth discovering, and the genres represented across the lineup.
+                        Create a LineupHighlights from these findings.
+                        """.formatted(
+                                festivalInfo.festivalName(),
+                                festivalInfo.location(),
+                                festivalInfo.startDate(),
+                                festivalInfo.endDate()
+                        ),
+                        LineupHighlights.class
+                );
+
+        if (lineup == null || lineup.headliners() == null || lineup.headliners().isEmpty()) {
+            throw new LineupUnavailableException(
+                    "Could not resolve lineup information for: " + festivalInfo.festivalName());
+        }
+        return lineup;
+    }
+
 
 }
