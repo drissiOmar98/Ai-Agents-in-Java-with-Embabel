@@ -128,5 +128,43 @@ public class LogisticsAgent {
                 );
     }
 
+    /**
+     * Generates practical safety and wellbeing guidance tailored to the
+     * festival's format and environment.
+     *
+     * <p>Marked as its own {@link AchievesGoal}, reachable from just
+     * {@link FestivalBasicInfo}.</p>
+     *
+     * @param festivalInfo the output of {@link FestivalPlannerAgent#extractFestivalInfo}
+     * @param context      Embabel's operation context, providing access to the LLM
+     * @return practical safety tips and emergency guidance
+     */
+    @AchievesGoal(description = "Practical safety and wellbeing guidance for the festival")
+    @Action(description = "Generate safety and wellbeing tips for the festival")
+    public SafetyTips generateSafetyTips(FestivalBasicInfo festivalInfo, OperationContext context) {
+        return context.ai()
+                .withDefaultLlm()
+                .withPromptContributors(List.of(Personas.FESTIVAL_VETERAN))
+                .createObjectIfPossible(
+                        """
+                        Festival: %s in %s (%s to %s), format: %s
 
+                        Give practical, actionable safety and wellbeing tips specific to
+                        this festival's format and environment (heat/hydration for
+                        outdoor/camping events, crowd navigation for dense venues, hearing
+                        protection, staying with a group, etc.).
+
+                        Also give brief guidance on what to do in an emergency or if
+                        separated from a group at this specific type of event.
+                        Create a SafetyTips from these tips and guidance.
+                        """.formatted(
+                                festivalInfo.festivalName(),
+                                festivalInfo.location(),
+                                festivalInfo.startDate(),
+                                festivalInfo.endDate(),
+                                festivalInfo.festivalType()
+                        ),
+                        SafetyTips.class
+                );
+    }
 }
