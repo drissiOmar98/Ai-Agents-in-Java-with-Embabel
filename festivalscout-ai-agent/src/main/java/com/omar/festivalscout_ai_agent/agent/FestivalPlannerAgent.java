@@ -71,5 +71,34 @@ public class FestivalPlannerAgent {
         this.properties = properties;
     }
 
+    /**
+     * Extracts the festival's core identity (name, location, dates, format)
+     * from the user's free-text request.
+     *
+     * @param userInput the user's free-text request, e.g.
+     *                  {@code "I'm going to Tomorrowland this year"}
+     * @param context   Embabel's operation context, providing access to the LLM
+     * @return the festival's name, location, dates, and format descriptor
+     */
+    @Action
+    public FestivalBasicInfo extractFestivalInfo(UserInput userInput, OperationContext context) {
+        return context.ai()
+                .withDefaultLlm()
+                .withToolGroup(CoreToolGroups.WEB)
+                .createObjectIfPossible(
+                        """
+                        Identify the music festival mentioned in this request, using web
+                        search if needed to confirm its location, dates, and format:
+                        %s
+
+                        Create a FestivalBasicInfo with the festival's name, location,
+                        start/end dates, and a short descriptor of its format (e.g.
+                        "multi-day camping EDM festival" or "downtown multi-stage
+                        festival, no camping").
+                        """.formatted(userInput.getContent()),
+                        FestivalBasicInfo.class
+                );
+    }
+
 
 }
