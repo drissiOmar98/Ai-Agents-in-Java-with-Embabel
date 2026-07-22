@@ -164,5 +164,54 @@ public class FestivalPlannerAgent {
         return lineup;
     }
 
+    /**
+     * Matches the attendee's preferences against the researched lineup to
+     * produce a personalized, prioritized set of must-see artists with
+     * concrete scheduling details.
+     *
+     * <p>Uses the {@link Personas#MUSIC_CURATOR} persona so picks read like
+     * genuine recommendations rather than a generic "here are the
+     * headliners" list.</p>
+     *
+     * @param lineup      the output of {@link #researchLineup}
+     * @param preferences the output of {@link #extractAttendeePreferences}
+     * @param context     Embabel's operation context, providing access to the LLM
+     * @return prioritized artist picks with day/stage/time details, capped at
+     *         {@link FestivalScoutProperties#maxMustSeeArtists()}
+     */
+    @Action
+    public MustSeePicks pickMustSeeArtists(LineupHighlights lineup, AttendeePreferences preferences,
+                                           OperationContext context) {
+        return context.ai()
+                .withDefaultLlm()
+                .withPromptContributors(List.of(Personas.MUSIC_CURATOR))
+                .createObjectIfPossible(
+                        """
+                        Lineup headliners: %s
+                        Rising artists: %s
+                        Genres on the lineup: %s
+
+                        Attendee favorite genres: %s
+                        Attendee favorite artists: %s
+
+                        Pick up to %d must-see sets that best match this attendee's taste,
+                        mixing headliners they'd genuinely enjoy with rising artists suited
+                        to their genre preferences. For each pick, assign a plausible day,
+                        stage, and 24-hour start/end time (estimate reasonably if the exact
+                        schedule isn't known), and briefly explain why it fits this
+                        attendee.
+                        Create a MustSeePicks from these recommendations.
+                        """.formatted(
+                                String.join(", ", lineup.headliners()),
+                                String.join(", ", lineup.risingArtists()),
+                                String.join(", ", lineup.genres()),
+                                String.join(", ", preferences.favoriteGenres()),
+                                String.join(", ", preferences.favoriteArtists()),
+                                properties.maxMustSeeArtists()
+                        ),
+                        MustSeePicks.class
+                );
+    }
+
 
 }
