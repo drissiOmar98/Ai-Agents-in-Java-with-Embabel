@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: festival-scout
+
+# Bound to com.festivalscout.config.FestivalScoutProperties
+festival-scout:
+  max-must-see-artists: 8            # prioritized artist picks generated
+  max-packing-items-per-category: 6  # items per packing list category
+
+embabel:
+  agent:
+    logging:
+      personality: starwars   # cosmetic: flavors Embabel's console log output
+  models:
+    default-llm: claude-sonnet-4-6
