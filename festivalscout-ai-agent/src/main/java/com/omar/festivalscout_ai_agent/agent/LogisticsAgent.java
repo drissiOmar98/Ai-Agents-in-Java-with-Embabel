@@ -83,5 +83,50 @@ public class LogisticsAgent {
                 );
     }
 
+    /**
+     * Estimates the total cost of attending, using
+     * {@link BudgetCalculatorTool} to sum the individual line items
+     * deterministically rather than trusting the model's arithmetic.
+     *
+     * <p>Marked as its own {@link AchievesGoal}, reachable from just
+     * {@link FestivalBasicInfo}/{@link AttendeePreferences}.</p>
+     *
+     * @param festivalInfo the output of {@link FestivalPlannerAgent#extractFestivalInfo}
+     * @param preferences  the output of {@link FestivalPlannerAgent#extractAttendeePreferences}
+     * @param context      Embabel's operation context, providing access to the LLM
+     * @return the estimated total cost in USD and its line-item breakdown
+     */
+    @AchievesGoal(description = "A cost estimate for attending the festival, broken down by line item")
+    @Action(description = "Estimate the total cost of attending the festival")
+    public BudgetEstimate estimateBudget(FestivalBasicInfo festivalInfo, AttendeePreferences preferences,
+                                         OperationContext context) {
+        return context.ai()
+                .withDefaultLlm()
+                .withToolObject(budgetCalculatorTool)
+                .createObjectIfPossible(
+                        """
+                        Festival: %s in %s, format: %s
+                        Attendee's budget level: %s, traveling from: %s
+
+                        Estimate realistic cost line items (e.g. ticket, flights/travel,
+                        lodging or camping gear, food/drink, miscellaneous) appropriate to
+                        the attendee's stated budget level.
+
+                        Use the calculateTotal tool with a comma-separated label:amount
+                        string built from your estimated line items, and put the tool's
+                        exact total into estimatedTotalUsd. List the same line items,
+                        formatted as "Label: $amount", into lineItems.
+                        Create a BudgetEstimate from the tool's result and your line items.
+                        """.formatted(
+                                festivalInfo.festivalName(),
+                                festivalInfo.location(),
+                                festivalInfo.festivalType(),
+                                preferences.budgetLevel(),
+                                preferences.travelingFrom()
+                        ),
+                        BudgetEstimate.class
+                );
+    }
+
 
 }
