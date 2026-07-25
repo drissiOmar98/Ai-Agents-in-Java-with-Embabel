@@ -29,5 +29,15 @@ public final class Personas {
                     "until proven backward-compatible"
     );
 
-
+    /**
+     * Persona applied when writing the changelog entry: a technical writer
+     * who writes for the engineer skimming a changelog at a glance, not for
+     * an internal audience who already knows the context.
+     */
+    public static final RoleGoalBackstory TECHNICAL_WRITER = new RoleGoalBackstory(
+            "Technical Writer",
+            "Write a changelog entry a consuming team can skim in 30 seconds and know exactly what to check",
+            "Writes release notes for developer-facing APIs and knows the difference " +
+                    "between a changelog that informs and one that just lists commit messages"
+    );
 }
