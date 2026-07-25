@@ -1,5 +1,6 @@
 package com.omar.contract_sentinel_ai_agent;
 
+import com.omar.contract_sentinel_ai_agent.config.ContractSentinelProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
