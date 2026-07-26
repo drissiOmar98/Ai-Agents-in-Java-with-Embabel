@@ -174,5 +174,48 @@ public class ApiDiffAgent {
                 );
     }
 
+    /**
+     * Judges the real-world consumer impact of each structural change from
+     * {@link #compareSnapshots}, using the {@link Personas#API_ARCHITECT}
+     * persona so classification reflects genuine consumer-contract
+     * thinking rather than a surface reading of "did this field change."
+     *
+     * @param diffReport the output of {@link #compareSnapshots}
+     * @param context    Embabel's operation context, providing access to the LLM
+     * @return every change with a severity classification and consumer impact explanation
+     */
+    @Action
+    public BreakingChangeReport classifyBreakingChanges(ApiDiffReport diffReport, OperationContext context) {
+        BreakingChangeReport report = context.ai()
+                .withDefaultLlm()
+                .withPromptContributors(List.of(Personas.API_ARCHITECT))
+                .createObjectIfPossible(
+                        """
+                        Added endpoints: %s
+                        Removed endpoints: %s
+                        Changed endpoints: %s
+
+                        For every removed endpoint and every changed endpoint, classify it as:
+                        - BREAKING: an existing consumer's current integration will fail
+                        - NON_BREAKING: existing consumers are unaffected (e.g. a purely
+                          additive optional field)
+                        - DEPRECATION: still works today but consumers should migrate away
+
+                        Added endpoints are always NON_BREAKING (nothing existing depended
+                        on them). For each, explain the concrete consumer impact.
+                        Create a BreakingChangeReport listing every change classified this way.
+                        """.formatted(
+                                diffReport.addedEndpoints().isEmpty() ? "(none)" : String.join(", ", diffReport.addedEndpoints()),
+                                diffReport.removedEndpoints().isEmpty() ? "(none)" : String.join(", ", diffReport.removedEndpoints()),
+                                diffReport.changedEndpoints().isEmpty() ? "(none)" : String.join(", ", diffReport.changedEndpoints())
+                        ),
+                        BreakingChangeReport.class
+                );
+
+        boolean hasBreaking = report.changes().stream()
+                .anyMatch(change -> "BREAKING".equalsIgnoreCase(change.severity()));
+        return new BreakingChangeReport(report.changes(), hasBreaking);
+    }
+
 
 }
