@@ -268,5 +268,20 @@ public class ApiDiffAgent {
         return guide;
     }
 
+    private String serialize(PreviousApiSnapshot snapshot) {
+        return snapshot.endpoints().stream().map(this::serializeEndpoint).collect(Collectors.joining(";"));
+    }
 
+    private String serialize(CurrentApiSnapshot snapshot) {
+        return snapshot.endpoints().stream().map(this::serializeEndpoint).collect(Collectors.joining(";"));
+    }
+
+    private String serializeEndpoint(ApiEndpoint endpoint) {
+        return "%s|%s|%s|%s".formatted(
+                endpoint.method(),
+                endpoint.path(),
+                String.join(",", endpoint.requestFields()),
+                String.join(",", endpoint.responseFields())
+        );
+    }
 }
