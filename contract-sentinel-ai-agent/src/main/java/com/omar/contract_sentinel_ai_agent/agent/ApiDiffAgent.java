@@ -141,5 +141,38 @@ public class ApiDiffAgent {
         return snapshot;
     }
 
+    /**
+     * Mechanically diffs the two snapshots using {@link ApiDiffTool}, so
+     * additions, removals, and field-level changes are computed by exact
+     * set comparison rather than an LLM comparing two lists by eye.
+     *
+     * @param previous the output of {@link #extractPreviousSnapshot}
+     * @param current  the output of {@link #extractCurrentSnapshot}
+     * @param context  Embabel's operation context, providing access to the LLM
+     * @return the structural diff: what was added, removed, and changed
+     */
+    @Action(description = "Structurally diff the previous and current API contracts")
+    public ApiDiffReport compareSnapshots(PreviousApiSnapshot previous, CurrentApiSnapshot current,
+                                            OperationContext context) {
+        return context.ai()
+                .withDefaultLlm()
+                .withToolObject(apiDiffTool)
+                .createObjectIfPossible(
+                        """
+                        Use the compareEndpoints tool with:
+                        - previousEndpoints: %s
+                        - currentEndpoints: %s
+
+                        Put the tool's exact ADDED entries into addedEndpoints, its exact
+                        REMOVED entries into removedEndpoints, and its exact CHANGED
+                        entries into changedEndpoints. Each is a list, so split the tool's
+                        comma/semicolon-separated groups into individual list entries.
+                        If a section wasn't in the tool's output, leave that list empty.
+                        Create an ApiDiffReport from the tool's result.
+                        """.formatted(serialize(previous), serialize(current)),
+                        ApiDiffReport.class
+                );
+    }
+
 
 }
