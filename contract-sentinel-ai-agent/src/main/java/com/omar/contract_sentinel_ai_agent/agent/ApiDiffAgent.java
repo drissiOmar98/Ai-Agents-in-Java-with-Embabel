@@ -217,5 +217,56 @@ public class ApiDiffAgent {
         return new BreakingChangeReport(report.changes(), hasBreaking);
     }
 
+    /**
+     * Writes a concrete, step-by-step guide for existing consumers to
+     * migrate safely to the new contract version, informed by both the
+     * classified changes and the computed semver bump.
+     *
+     * <p>This is the pipeline's primary goal.</p>
+     *
+     * @param breakingChangeReport the output of {@link #classifyBreakingChanges}
+     * @param semverRecommendation the output of {@link VersioningAgent#recommendSemverBump}
+     * @param context              Embabel's operation context, providing access to the LLM
+     * @return ordered migration steps, capped at
+     *         {@link ContractSentinelProperties#maxMigrationSteps()}
+     */
+    @AchievesGoal(description = "A step-by-step migration guide for existing API consumers")
+    @Action
+    public MigrationGuide generateMigrationGuide(BreakingChangeReport breakingChangeReport,
+                                                   SemverRecommendation semverRecommendation, OperationContext context) {
+        String changesSummary = breakingChangeReport.changes().stream()
+                .map(change -> "- [%s] %s — %s".formatted(change.severity(), change.change(), change.consumerImpact()))
+                .collect(Collectors.joining("\n"));
+
+        MigrationGuide guide = context.ai()
+                .withDefaultLlm()
+                .withPromptContributors(List.of(Personas.API_ARCHITECT))
+                .createObjectIfPossible(
+                        """
+                        Recommended version bump: %s (%s)
+
+                        Classified changes:
+                        %s
+
+                        Write up to %d concrete, ordered migration steps for an existing
+                        consumer team to follow before this version ships. Address every
+                        BREAKING change explicitly - name what field/endpoint they must
+                        update and how. Skip steps for NON_BREAKING changes unless there's
+                        a genuine reason a consumer should still act on them.
+                        Create a MigrationGuide from these steps.
+                        """.formatted(
+                                semverRecommendation.bumpType(),
+                                semverRecommendation.rationale(),
+                                changesSummary.isBlank() ? "(no changes classified)" : changesSummary,
+                                properties.maxMigrationSteps()
+                        ),
+                        MigrationGuide.class
+                );
+
+        log.info("Migration guide generated: {} steps, bump type {}",
+                guide != null ? guide.steps().size() : 0, semverRecommendation.bumpType());
+        return guide;
+    }
+
 
 }
