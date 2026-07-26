@@ -107,5 +107,39 @@ public class ApiDiffAgent {
         return snapshot;
     }
 
+    /**
+     * Extracts the new, not-yet-released version's endpoints from the
+     * user's input.
+     *
+     * @param userInput free-text input expected to describe both the previous
+     *                  and current version of the API contract
+     * @param context   Embabel's operation context, providing access to the LLM
+     * @return every endpoint defined in the current version
+     * @throws ApiSnapshotIncompleteException if no current-version endpoints could be identified
+     */
+    @Action
+    public CurrentApiSnapshot extractCurrentSnapshot(UserInput userInput, OperationContext context) {
+        CurrentApiSnapshot snapshot = context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        The following text describes two versions of an API contract.
+                        Extract only the CURRENT (new, not yet released) version's endpoints:
+                        %s
+
+                        For each endpoint, identify its HTTP method, path, request fields
+                        (as "name:type"), and response fields (as "name:type").
+                        Create a CurrentApiSnapshot from these endpoints.
+                        """.formatted(userInput.getContent()),
+                        CurrentApiSnapshot.class
+                );
+
+        if (snapshot == null || snapshot.endpoints() == null || snapshot.endpoints().isEmpty()) {
+            throw new ApiSnapshotIncompleteException(
+                    "Could not identify any endpoints for the current API version");
+        }
+        return snapshot;
+    }
+
 
 }
