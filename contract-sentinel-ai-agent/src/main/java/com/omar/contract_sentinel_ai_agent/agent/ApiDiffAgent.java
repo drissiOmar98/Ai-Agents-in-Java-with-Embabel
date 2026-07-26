@@ -73,5 +73,39 @@ public class ApiDiffAgent {
         this.apiDiffTool = apiDiffTool;
     }
 
+    /**
+     * Extracts the previous (currently shipped) version's endpoints from
+     * the user's input.
+     *
+     * @param userInput free-text input expected to describe both the previous
+     *                  and current version of the API contract
+     * @param context   Embabel's operation context, providing access to the LLM
+     * @return every endpoint defined in the previous version
+     * @throws ApiSnapshotIncompleteException if no previous-version endpoints could be identified
+     */
+    @Action
+    public PreviousApiSnapshot extractPreviousSnapshot(UserInput userInput, OperationContext context) {
+        PreviousApiSnapshot snapshot = context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        The following text describes two versions of an API contract.
+                        Extract only the PREVIOUS (currently shipped) version's endpoints:
+                        %s
+
+                        For each endpoint, identify its HTTP method, path, request fields
+                        (as "name:type"), and response fields (as "name:type").
+                        Create a PreviousApiSnapshot from these endpoints.
+                        """.formatted(userInput.getContent()),
+                        PreviousApiSnapshot.class
+                );
+
+        if (snapshot == null || snapshot.endpoints() == null || snapshot.endpoints().isEmpty()) {
+            throw new ApiSnapshotIncompleteException(
+                    "Could not identify any endpoints for the previous API version");
+        }
+        return snapshot;
+    }
+
 
 }
