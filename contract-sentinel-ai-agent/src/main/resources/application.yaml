@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: contract-sentinel-ai-agent
+# Bound to com.contractsentinel.config.ContractSentinelProperties
+contract-sentinel:
+  max-migration-steps: 10   # ordered steps generated in the consumer migration guide
+
+embabel:
+  agent:
+    logging:
+      personality: starwars   # cosmetic: flavors Embabel's console log output
+  models:
+    default-llm: claude-sonnet-4-6
