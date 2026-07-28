@@ -1,3 +1,15 @@
 spring:
   application:
     name: home-energy-tracker
+
+# Bound to com.wattwise.config.WattWiseProperties
+watt-wise:
+  max-savings-actions: 8            # ranked savings actions generated
+  max-schedule-recommendations: 6   # appliance timing shifts generated
+
+embabel:
+  agent:
+    logging:
+      personality: starwars   # cosmetic: flavors Embabel's console log output
+  models:
+    default-llm: claude-sonnet-4-6
