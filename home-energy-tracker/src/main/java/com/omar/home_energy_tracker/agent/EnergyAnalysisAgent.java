@@ -143,5 +143,46 @@ public class EnergyAnalysisAgent {
                 );
     }
 
+    /**
+     * Calculates each appliance's monthly kWh consumption and cost using
+     * {@link EnergyCostCalculatorTool}, so the household sees real
+     * arithmetic rather than an LLM's ballpark guess across every
+     * appliance at once.
+     *
+     * @param householdProfile the output of {@link #extractHouseholdProfile}
+     * @param tariffPlan       the output of {@link #extractTariffPlan}
+     * @param context          Embabel's operation context, providing access to the LLM
+     * @return the per-appliance breakdown and total estimated monthly cost
+     */
+    @Action(description = "Calculate a deterministic per-appliance monthly cost breakdown")
+    public CostBreakdownReport calculateCostBreakdown(HouseholdProfile householdProfile, TariffPlan tariffPlan,
+                                                        OperationContext context) {
+        String entriesCsv = householdProfile.appliances().stream()
+                .map(appliance -> "%s|%.1f|%.1f|%.4f".formatted(
+                        appliance.applianceName(), appliance.wattage(), appliance.hoursPerDay(),
+                        tariffPlan.offPeakPricePerKwh()))
+                .collect(Collectors.joining(";"));
+
+        CostBreakdownReport report = context.ai()
+                .withDefaultLlm()
+                .withToolObject(energyCostCalculatorTool)
+                .createObjectIfPossible(
+                        """
+                        Use the calculateMonthlyCosts tool with this applianceEntries value:
+                        %s
+
+                        Put the tool's exact per-appliance kWh and cost figures into
+                        breakdown, and its exact TOTAL figure plus the fixed monthly
+                        charge of $%.2f into totalEstimatedMonthlyCostUsd.
+                        Create a CostBreakdownReport from the tool's result.
+                        """.formatted(entriesCsv, tariffPlan.fixedMonthlyChargeUsd()),
+                        CostBreakdownReport.class
+                );
+
+        log.info("Cost breakdown calculated: ${} estimated monthly total",
+                report != null ? report.totalEstimatedMonthlyCostUsd() : 0.0);
+        return report;
+    }
+
 
 }
