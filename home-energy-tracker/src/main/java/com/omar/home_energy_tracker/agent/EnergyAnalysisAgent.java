@@ -77,5 +77,42 @@ public class EnergyAnalysisAgent {
         this.paybackPeriodTool = paybackPeriodTool;
     }
 
+    /**
+     * Extracts the household's appliance profile from the user's input.
+     *
+     * @param userInput free-text input expected to describe the household's
+     *                  appliances and its electricity tariff
+     * @param context   Embabel's operation context, providing access to the LLM
+     * @return the household's appliances, location, and size
+     * @throws HouseholdProfileIncompleteException if no appliances could be identified at all
+     */
+    @Action
+    public HouseholdProfile extractHouseholdProfile(UserInput userInput, OperationContext context) {
+        HouseholdProfile profile = context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        The following text describes a household's appliances and
+                        electricity tariff. Extract only the appliance and household
+                        details:
+                        %s
+
+                        For each appliance, identify its name, approximate wattage while
+                        running, estimated hours per day it runs or draws power, and its
+                        usage pattern (e.g. always-on, daily, a few times a week). Also
+                        identify the household's general location and how many people
+                        live there.
+                        Create a HouseholdProfile from these details.
+                        """.formatted(userInput.getContent()),
+                        HouseholdProfile.class
+                );
+
+        if (profile == null || profile.appliances() == null || profile.appliances().isEmpty()) {
+            throw new HouseholdProfileIncompleteException(
+                    "Could not identify any appliances from the submitted household description");
+        }
+        return profile;
+    }
+
 
 }
