@@ -114,5 +114,34 @@ public class EnergyAnalysisAgent {
         return profile;
     }
 
+    /**
+     * Extracts the household's electricity rate structure from the user's
+     * input.
+     *
+     * @param userInput free-text input expected to describe the household's
+     *                  appliances and its electricity tariff
+     * @param context   Embabel's operation context, providing access to the LLM
+     * @return the household's peak/off-peak pricing and fixed monthly charge
+     */
+    @Action
+    public TariffPlan extractTariffPlan(UserInput userInput, OperationContext context) {
+        return context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        The following text describes a household's appliances and
+                        electricity tariff. Extract only the tariff/rate details:
+                        %s
+
+                        Identify the price per kWh (off-peak or flat rate), the peak-hour
+                        price per kWh if a time-of-use plan is mentioned (otherwise equal
+                        to the off-peak price), the peak hours window if any (otherwise
+                        "none"), and any fixed monthly charge.
+                        Create a TariffPlan from these details.
+                        """.formatted(userInput.getContent()),
+                        TariffPlan.class
+                );
+    }
+
 
 }
