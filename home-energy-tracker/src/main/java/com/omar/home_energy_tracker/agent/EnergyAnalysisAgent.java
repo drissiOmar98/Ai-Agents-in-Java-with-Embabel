@@ -229,5 +229,71 @@ public class EnergyAnalysisAgent {
                 );
     }
 
+    /**
+     * Proposes a ranked savings plan, computing each action's payback
+     * period deterministically in plain Java rather than trusting the
+     * model's arithmetic across several actions.
+     *
+     * <p>This is the pipeline's primary goal.</p>
+     *
+     * @param efficiencyReport    the output of {@link #identifyEfficiencyIssues}
+     * @param costBreakdownReport the output of {@link #calculateCostBreakdown}
+     * @param tariffPlan          the output of {@link #extractTariffPlan}
+     * @param context             Embabel's operation context, providing access to the LLM
+     * @return ranked savings actions, each with a computed payback period, capped at
+     *         {@link WattWiseProperties#maxSavingsActions()}
+     */
+    @AchievesGoal(description = "A ranked, cost-justified energy savings plan with computed payback periods")
+    @Action
+    public SavingsPlan generateSavingsPlan(EfficiencyReport efficiencyReport, CostBreakdownReport costBreakdownReport,
+                                             TariffPlan tariffPlan, OperationContext context) {
+        String findingsSummary = efficiencyReport.findings().stream()
+                .map(finding -> "- %s: %s — %s".formatted(finding.appliance(), finding.issue(), finding.recommendation()))
+                .collect(Collectors.joining("\n"));
 
+        SavingsPlan draftPlan = context.ai()
+                .withDefaultLlm()
+                .withPromptContributors(List.of(Personas.ENERGY_AUDITOR))
+                .createObjectIfPossible(
+                        """
+                        Identified inefficiencies:
+                        %s
+
+                        Total estimated monthly bill: $%.2f
+                        Peak hours window: %s
+
+                        Propose up to %d ranked savings actions, ordered by impact.
+                        For each, estimate realistic monthly savings in USD. If an action
+                        requires buying a replacement (e.g. a new appliance), estimate its
+                        upfront cost in USD; otherwise use 0. Set paybackPeriod to an empty
+                        string - it will be computed separately.
+                        Create a SavingsPlan from these ranked actions.
+                        """.formatted(
+                                findingsSummary.isBlank() ? "(no significant inefficiencies found)" : findingsSummary,
+                                costBreakdownReport.totalEstimatedMonthlyCostUsd(),
+                                tariffPlan.peakHoursWindow(),
+                                properties.maxSavingsActions()
+                        ),
+                        SavingsPlan.class
+                );
+
+        // Payback period is a single division with one correct answer - computed
+        // here, in plain Java, rather than trusted to the model's arithmetic.
+        List<SavingsAction> actionsWithPayback = draftPlan.actions().stream()
+                .map(action -> new SavingsAction(
+                        action.action(),
+                        action.estimatedMonthlySavingsUsd(),
+                        action.estimatedUpfrontCostUsd(),
+                        action.effortLevel(),
+                        paybackPeriodTool.calculatePaybackPeriod(
+                                action.estimatedUpfrontCostUsd(), action.estimatedMonthlySavingsUsd())
+                ))
+                .toList();
+
+        double totalSavings = actionsWithPayback.stream()
+                .mapToDouble(SavingsAction::estimatedMonthlySavingsUsd)
+                .sum();
+
+        return new SavingsPlan(actionsWithPayback, totalSavings);
+    }
 }
