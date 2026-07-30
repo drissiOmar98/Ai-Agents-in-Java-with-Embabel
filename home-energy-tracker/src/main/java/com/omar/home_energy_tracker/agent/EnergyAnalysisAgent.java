@@ -184,5 +184,50 @@ public class EnergyAnalysisAgent {
         return report;
     }
 
+    /**
+     * Identifies real, cost-significant inefficiencies in the household's
+     * usage, using the {@link Personas#ENERGY_AUDITOR} persona so findings
+     * reflect genuine audit judgment rather than generic advice.
+     *
+     * @param costBreakdownReport the output of {@link #calculateCostBreakdown}
+     * @param householdProfile    the output of {@link #extractHouseholdProfile}
+     * @param context             Embabel's operation context, providing access to the LLM
+     * @return identified inefficiencies with concrete recommendations
+     */
+    @Action
+    public EfficiencyReport identifyEfficiencyIssues(CostBreakdownReport costBreakdownReport,
+                                                        HouseholdProfile householdProfile, OperationContext context) {
+        String breakdownSummary = costBreakdownReport.breakdown().stream()
+                .map(item -> "- %s: %.2f kWh/month, $%.2f/month".formatted(
+                        item.applianceName(), item.estimatedKwhPerMonth(), item.estimatedCostPerMonthUsd()))
+                .collect(Collectors.joining("\n"));
+
+        String usagePatterns = householdProfile.appliances().stream()
+                .map(appliance -> "- %s: %s".formatted(appliance.applianceName(), appliance.usagePattern()))
+                .collect(Collectors.joining("\n"));
+
+        return context.ai()
+                .withDefaultLlm()
+                .withPromptContributors(List.of(Personas.ENERGY_AUDITOR))
+                .createObjectIfPossible(
+                        """
+                        Calculated monthly cost breakdown:
+                        %s
+
+                        Stated usage patterns:
+                        %s
+
+                        Identify real, cost-significant inefficiencies - focus on
+                        appliances driving a meaningful share of the bill, always-on
+                        devices that could likely be replaced or unplugged, and any usage
+                        that looks avoidable. Don't flag negligible issues just to have
+                        something to say.
+                        Create an EfficiencyReport listing each real finding with a
+                        concrete recommendation.
+                        """.formatted(breakdownSummary, usagePatterns),
+                        EfficiencyReport.class
+                );
+    }
+
 
 }
