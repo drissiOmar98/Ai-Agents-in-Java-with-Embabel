@@ -1,4 +1,4 @@
-package com.example.skyclaim_ai_flight_compensation.model;
+package com.omar.skyclaim.model;
 
 /**
  * Context about the traveler and booking, used to assess jurisdiction and

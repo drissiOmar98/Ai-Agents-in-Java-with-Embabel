@@ -1,4 +1,4 @@
-package com.example.skyclaim_ai_flight_compensation.config;
+package com.omar.skyclaim.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

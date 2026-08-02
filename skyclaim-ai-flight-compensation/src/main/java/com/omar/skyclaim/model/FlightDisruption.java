@@ -1,4 +1,4 @@
-package com.example.skyclaim_ai_flight_compensation.model;
+package com.omar.skyclaim.model;
 
 /**
  * The core facts of a flight disruption, extracted from the traveler's

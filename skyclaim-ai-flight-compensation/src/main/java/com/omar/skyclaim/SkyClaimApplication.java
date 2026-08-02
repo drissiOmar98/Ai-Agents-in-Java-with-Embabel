@@ -1,6 +1,6 @@
-package com.example.skyclaim_ai_flight_compensation;
+package com.omar.skyclaim;
 
-import com.example.skyclaim_ai_flight_compensation.config.SkyClaimProperties;
+import com.omar.skyclaim.config.SkyClaimProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -38,10 +38,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
  */
 @SpringBootApplication
 @EnableConfigurationProperties(SkyClaimProperties.class)
-public class SkyclaimAiFlightCompensationApplication {
+public class SkyClaimApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(SkyclaimAiFlightCompensationApplication.class, args);
+		SpringApplication.run(SkyClaimApplication.class, args);
 	}
 
 }

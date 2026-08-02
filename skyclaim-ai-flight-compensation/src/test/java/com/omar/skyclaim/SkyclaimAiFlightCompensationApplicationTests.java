@@ -1,4 +1,4 @@
-package com.example.skyclaim_ai_flight_compensation;
+package com.omar.skyclaim;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
