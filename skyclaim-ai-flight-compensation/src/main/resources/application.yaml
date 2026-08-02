@@ -1,0 +1,3 @@
+spring:
+  application:
+    name: skyclaim-ai-flight-compensation
