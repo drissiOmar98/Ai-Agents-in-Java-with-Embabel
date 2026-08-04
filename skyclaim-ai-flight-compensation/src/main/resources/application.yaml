@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: skyclaim-ai-flight-compensation
+
+# Bound to com.skyclaim.config.SkyClaimProperties
+sky-claim:
+  max-rebooking-steps: 8       # ordered next-step recommendations generated
+  max-care-entitlements: 6     # immediate care entitlement items listed
+
+embabel:
+  agent:
+    logging:
+      personality: starwars   # cosmetic: flavors Embabel's console log output
+  models:
+    default-llm: claude-sonnet-4-6
