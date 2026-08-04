@@ -236,5 +236,57 @@ public class DisruptionAnalysisAgent {
                 );
     }
 
+    /**
+     * Drafts a compensation claim letter addressed to the airline,
+     * grounded in the computed amount and eligibility assessment.
+     *
+     * <p>This is the pipeline's primary goal.</p>
+     *
+     * @param eligibilityAssessment   the output of {@link #assessEligibility}
+     * @param compensationCalculation the output of {@link #calculateCompensation}
+     * @param disruption              the output of {@link #extractFlightDisruption}
+     * @param travelerContext         the output of {@link #extractTravelerContext}
+     * @param context                 Embabel's operation context, providing access to the LLM
+     * @return a draft claim letter ready for the traveler to review and send
+     */
+    @AchievesGoal(description = "A draft compensation claim letter addressed to the airline")
+    @Action
+    public ClaimLetter draftClaimLetter(EligibilityAssessment eligibilityAssessment,
+                                          CompensationCalculation compensationCalculation, FlightDisruption disruption,
+                                          TravelerContext travelerContext, OperationContext context) {
+        ClaimLetter letter = context.ai()
+                .withDefaultLlm()
+                .withPromptContributors(List.of(Personas.CONSUMER_RIGHTS_ADVOCATE))
+                .createObjectIfPossible(
+                        """
+                        Write a formal compensation claim letter from %s to %s regarding
+                        flight %s (%s to %s) on the basis of EU Regulation 261/2004.
 
+                        Disruption: %s, arrived %.1f hours late. Booking reference: %s.
+                        Requested compensation: €%.0f.
+                        Jurisdiction basis: %s
+                        Regarding the airline's stated reason: %s
+
+                        Keep it factual, polite, and firm - state the flight details, the
+                        disruption, cite EU261 and the specific amount owed, and request a
+                        response within a reasonable timeframe (e.g. 14 days). Do not
+                        overstate certainty about eligibility if the assessment is
+                        uncertain - state the claim clearly while inviting the airline to
+                        respond with their position.
+                        Create a ClaimLetter with a subject line and full body.
+                        """.formatted(
+                                travelerContext.travelerName(), disruption.airline(),
+                                disruption.flightNumber(), disruption.departureAirport(), disruption.arrivalAirport(),
+                                disruption.disruptionType(), disruption.delayHoursAtArrival(),
+                                travelerContext.bookingReference(), compensationCalculation.amountEur(),
+                                eligibilityAssessment.jurisdictionBasis(),
+                                eligibilityAssessment.extraordinaryCircumstanceAssessment()
+                        ),
+                        ClaimLetter.class
+                );
+
+        log.info("Claim letter drafted for flight {} - requested amount €{}",
+                disruption.flightNumber(), compensationCalculation.amountEur());
+        return letter;
+    }
 }
