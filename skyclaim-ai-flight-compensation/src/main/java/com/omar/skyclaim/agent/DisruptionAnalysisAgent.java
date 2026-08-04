@@ -110,5 +110,32 @@ public class DisruptionAnalysisAgent {
         return disruption;
     }
 
+    /**
+     * Extracts context about the traveler and booking from the input.
+     *
+     * @param userInput free-text input describing the flight disruption and, optionally,
+     *                  the traveler's own context
+     * @param context   Embabel's operation context, providing access to the LLM
+     * @return the traveler's name, route countries, and booking details, where stated
+     */
+    @Action
+    public TravelerContext extractTravelerContext(UserInput userInput, OperationContext context) {
+        return context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        The following text describes a flight disruption, possibly
+                        alongside details about the traveler: %s
+
+                        Identify the traveler's name, the departure and arrival countries,
+                        the airline's country of registration if known, any booking
+                        reference mentioned, and the ticket price if stated. Leave fields
+                        blank/zero rather than guessing if not stated.
+                        Create a TravelerContext from these details.
+                        """.formatted(userInput.getContent()),
+                        TravelerContext.class
+                );
+    }
+
 
 }
