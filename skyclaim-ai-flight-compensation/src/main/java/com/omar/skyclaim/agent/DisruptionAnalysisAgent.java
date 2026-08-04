@@ -176,5 +176,65 @@ public class DisruptionAnalysisAgent {
         return new CompensationCalculation(amount, ruleTier, explanation);
     }
 
+    /**
+     * Assesses whether the traveler is likely eligible for the computed
+     * compensation amount &mdash; a genuine judgment call the regulation
+     * doesn't reduce to a formula, covering jurisdiction and whether the
+     * airline's stated reason plausibly qualifies as an extraordinary
+     * circumstance.
+     *
+     * <p>Uses the {@link Personas#CONSUMER_RIGHTS_ADVOCATE} persona, which
+     * is explicitly instructed to include a clear non-legal-advice
+     * disclaimer.</p>
+     *
+     * @param disruption              the output of {@link #extractFlightDisruption}
+     * @param travelerContext         the output of {@link #extractTravelerContext}
+     * @param compensationCalculation the output of {@link #calculateCompensation}
+     * @param context                 Embabel's operation context, providing access to the LLM
+     * @return the eligibility judgment, jurisdiction basis, extraordinary-circumstance
+     *         assessment, and a required disclaimer
+     */
+    @Action
+    public EligibilityAssessment assessEligibility(FlightDisruption disruption, TravelerContext travelerContext,
+                                                      CompensationCalculation compensationCalculation, OperationContext context) {
+        return context.ai()
+                .withDefaultLlm()
+                .withPromptContributors(List.of(Personas.CONSUMER_RIGHTS_ADVOCATE))
+                .createObjectIfPossible(
+                        """
+                        Flight: %s %s, %s to %s
+                        Departure country: %s, Arrival country: %s, Airline country: %s
+                        Disruption: %s, %.1f hours late, reason given: "%s"
+                        Computed compensation if eligible: €%.0f (%s)
+
+                        Assess:
+                        1. Jurisdiction: does this flight plausibly fall under EU261
+                           (departing an EU/EEA airport, or arriving one on an EU/EEA
+                           carrier)? Explain briefly based on what's known.
+                        2. Extraordinary circumstances: does the airline's stated reason
+                           plausibly qualify as an extraordinary circumstance that would
+                           exempt them from paying (e.g. weather, air traffic control
+                           restrictions, security threats, strikes outside the airline's
+                           control typically qualify; technical/mechanical issues from
+                           routine maintenance typically do NOT)?
+                        3. Give an overall likelyEligible judgment.
+
+                        Always include a clear assessmentDisclaimer stating this is
+                        informational guidance, not legal advice, and the traveler should
+                        confirm with the airline or their national enforcement body.
+                        Create an EligibilityAssessment from this analysis.
+                        """.formatted(
+                                disruption.airline(), disruption.flightNumber(),
+                                disruption.departureAirport(), disruption.arrivalAirport(),
+                                travelerContext.departureCountry(), travelerContext.arrivalCountry(),
+                                travelerContext.airlineCountry(),
+                                disruption.disruptionType(), disruption.delayHoursAtArrival(),
+                                disruption.reasonStatedByAirline(),
+                                compensationCalculation.amountEur(), compensationCalculation.ruleApplied()
+                        ),
+                        EligibilityAssessment.class
+                );
+    }
+
 
 }
