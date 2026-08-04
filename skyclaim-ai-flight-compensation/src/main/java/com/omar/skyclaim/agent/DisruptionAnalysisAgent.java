@@ -71,5 +71,44 @@ public class DisruptionAnalysisAgent {
         this.eu261CompensationRuleTool = eu261CompensationRuleTool;
     }
 
+    /**
+     * Extracts the core facts of the flight disruption from the
+     * traveler's free-text description.
+     *
+     * @param userInput free-text input describing the flight disruption and, optionally,
+     *                  the traveler's own context
+     * @param context   Embabel's operation context, providing access to the LLM
+     * @return the disruption's route, distance, delay, and stated reason
+     * @throws DisruptionDetailsIncompleteException if no disruption (delay/cancellation
+     *         type and duration) could be identified
+     */
+    @Action
+    public FlightDisruption extractFlightDisruption(UserInput userInput, OperationContext context) {
+        FlightDisruption disruption = context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        The following text describes a flight disruption. Extract the
+                        disruption details:
+                        %s
+
+                        Identify the airline, flight number, departure/arrival airports,
+                        approximate distance in kilometers between them, whether this was
+                        a DELAY or CANCELLATION, how many hours late the flight arrived (or
+                        would have, for a cancellation with a known replacement), the
+                        reason the airline gave (verbatim where possible), and for a
+                        cancellation, how many days' notice was given (-1 if not stated).
+                        Create a FlightDisruption from these details.
+                        """.formatted(userInput.getContent()),
+                        FlightDisruption.class
+                );
+
+        if (disruption == null || disruption.disruptionType() == null || disruption.disruptionType().isBlank()) {
+            throw new DisruptionDetailsIncompleteException(
+                    "Could not identify the flight disruption (delay/cancellation and duration) from the input");
+        }
+        return disruption;
+    }
+
 
 }
