@@ -137,5 +137,44 @@ public class DisruptionAnalysisAgent {
                 );
     }
 
+    /**
+     * Calculates the EU261 Article 7 compensation amount using
+     * {@link Eu261CompensationRuleTool}, so the figure quoted to the
+     * traveler is the amount the regulation actually specifies, not an
+     * LLM's approximation of it.
+     *
+     * @param disruption the output of {@link #extractFlightDisruption}
+     * @param context    Embabel's operation context, providing access to the LLM
+     * @return the computed compensation amount, rule tier, and a plain-language explanation
+     */
+    @Action(description = "Calculate the EU261 compensation amount by rule")
+    public CompensationCalculation calculateCompensation(FlightDisruption disruption, OperationContext context) {
+        // The amount is decided here, in plain Java, before the LLM is ever
+        // invoked for this step - there is exactly one correct figure per
+        // the regulation's distance/delay table.
+        double amount = eu261CompensationRuleTool.calculateCompensation(
+                disruption.distanceKm(), disruption.delayHoursAtArrival());
+        String ruleTier = eu261CompensationRuleTool.describeRuleTier(
+                disruption.distanceKm(), disruption.delayHoursAtArrival());
+
+        String explanation = context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        A compensation amount of €%.0f was computed for a flight of
+                        approximately %.0f km that arrived %.1f hours late, under this
+                        rule tier: %s
+
+                        Write one short sentence explaining this amount in plain language,
+                        referencing the actual distance and delay. Do not suggest a
+                        different amount - the calculation is already correct; just
+                        explain it.
+                        """.formatted(amount, disruption.distanceKm(), disruption.delayHoursAtArrival(), ruleTier),
+                        String.class
+                );
+
+        return new CompensationCalculation(amount, ruleTier, explanation);
+    }
+
 
 }
