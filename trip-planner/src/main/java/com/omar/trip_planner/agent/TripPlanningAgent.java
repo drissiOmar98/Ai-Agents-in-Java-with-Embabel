@@ -72,5 +72,40 @@ public class TripPlanningAgent {
         this.feasibilityRuleTool = feasibilityRuleTool;
     }
 
+    /**
+     * Extracts the trip's planned stops from the traveler's free-text
+     * description.
+     *
+     * @param userInput free-text input describing the multi-city trip and the
+     *                  traveler's preferences
+     * @param context   Embabel's operation context, providing access to the LLM
+     * @return the planned stops, in visiting order, and the total trip length
+     * @throws TripDetailsIncompleteException if no destinations could be identified at all
+     */
+    @Action
+    public ItineraryOutline extractItineraryOutline(UserInput userInput, OperationContext context) {
+        ItineraryOutline outline = context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        The following text describes a multi-city trip. Extract the
+                        planned stops, in visiting order:
+                        %s
+
+                        For each stop, identify the city and how many days the traveler
+                        currently plans to spend there. Also identify the total trip
+                        length in days.
+                        Create an ItineraryOutline from these details.
+                        """.formatted(userInput.getContent()),
+                        ItineraryOutline.class
+                );
+
+        if (outline == null || outline.stops() == null || outline.stops().isEmpty()) {
+            throw new TripDetailsIncompleteException(
+                    "Could not identify any planned destinations from the submitted trip description");
+        }
+        return outline;
+    }
+
 
 }
