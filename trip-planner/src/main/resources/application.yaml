@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: trip-planner
+
+# Bound to com.tripcompass.config.TripCompassProperties
+trip-compass:
+  max-packing-items-per-category: 6   # items per packing list category
+
+embabel:
+  agent:
+    logging:
+      personality: starwars   # cosmetic: flavors Embabel's console log output
+  models:
+    default-llm: claude-sonnet-4-6
