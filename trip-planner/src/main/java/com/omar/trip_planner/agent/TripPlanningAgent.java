@@ -172,5 +172,47 @@ public class TripPlanningAgent {
                 );
     }
 
+    /**
+     * Checks whether the planned itinerary is actually feasible, using
+     * {@link FeasibilityRuleTool} to compute the transit-to-usable-hours
+     * ratio deterministically rather than trusting an LLM's sense of
+     * "does this seem like a lot."
+     *
+     * @param itineraryOutline     the output of {@link #extractItineraryOutline}
+     * @param transitEstimates     the output of {@link #estimateTransitTimes}
+     * @param travelerPreferences  the output of {@link #extractTravelerPreferences}
+     * @param context              Embabel's operation context, providing access to the LLM
+     * @return the computed feasibility verdict and ratio
+     */
+    @Action(description = "Deterministically check whether the itinerary's transit load is feasible")
+    public FeasibilityReport checkFeasibility(ItineraryOutline itineraryOutline, TransitEstimates transitEstimates,
+                                                TravelerPreferences travelerPreferences, OperationContext context) {
+        // The ratio and feasibility verdict are decided here, in plain Java,
+        // before the LLM is ever invoked for this step.
+        double ratio = feasibilityRuleTool.calculateTransitRatio(
+                itineraryOutline.totalTripDays(), transitEstimates.totalTransitHours(), travelerPreferences.pace());
+        boolean feasible = feasibilityRuleTool.isFeasible(ratio, travelerPreferences.pace());
+
+        String verdictText = context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        A trip transit-to-usable-time ratio of %.0f%% was computed for a
+                        %d-day, %s-paced trip with %.1f total transit hours. This plan is
+                        considered %s for this pace.
+
+                        Write one short sentence explaining this verdict in plain
+                        language. Do not suggest a different verdict - it's already
+                        decided; just explain it.
+                        """.formatted(
+                                ratio * 100, itineraryOutline.totalTripDays(), travelerPreferences.pace(),
+                                transitEstimates.totalTransitHours(), feasible ? "feasible" : "overpacked"
+                        ),
+                        String.class
+                );
+
+        return new FeasibilityReport(feasible, ratio, verdictText);
+    }
+
 
 }
