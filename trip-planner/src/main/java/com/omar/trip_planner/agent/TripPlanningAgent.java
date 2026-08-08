@@ -107,5 +107,33 @@ public class TripPlanningAgent {
         return outline;
     }
 
+    /**
+     * Extracts the traveler's preferences and constraints from their
+     * free-text description.
+     *
+     * @param userInput free-text input describing the multi-city trip and the
+     *                  traveler's preferences
+     * @param context   Embabel's operation context, providing access to the LLM
+     * @return the traveler's interests, pace, budget, and travel style
+     */
+    @Action
+    public TravelerPreferences extractTravelerPreferences(UserInput userInput, OperationContext context) {
+        return context.ai()
+                .withDefaultLlm()
+                .createObjectIfPossible(
+                        """
+                        The following text describes a multi-city trip, possibly
+                        alongside the traveler's preferences: %s
+
+                        Identify their main interests, their preferred pace (RELAXED,
+                        MODERATE, or PACKED - infer from context if not explicit), their
+                        total budget in USD, and their travel style (e.g. backpacking,
+                        comfort, luxury).
+                        Create a TravelerPreferences from these details.
+                        """.formatted(userInput.getContent()),
+                        TravelerPreferences.class
+                );
+    }
+
 
 }
