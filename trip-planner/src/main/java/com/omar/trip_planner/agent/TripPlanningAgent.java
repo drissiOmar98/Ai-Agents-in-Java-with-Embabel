@@ -214,5 +214,69 @@ public class TripPlanningAgent {
         return new FeasibilityReport(feasible, ratio, verdictText);
     }
 
+    /**
+     * Builds the final day-by-day itinerary, restructuring the original
+     * stop/day allocation if {@link #checkFeasibility} found it wasn't
+     * realistic for the traveler's pace.
+     *
+     * <p>This is the pipeline's primary goal.</p>
+     *
+     * @param itineraryOutline    the output of {@link #extractItineraryOutline}
+     * @param transitEstimates    the output of {@link #estimateTransitTimes}
+     * @param feasibilityReport   the output of {@link #checkFeasibility}
+     * @param travelerPreferences the output of {@link #extractTravelerPreferences}
+     * @param context             Embabel's operation context, providing access to the LLM
+     * @return the final, realistic day-by-day itinerary
+     */
+    @AchievesGoal(description = "A realistic day-by-day itinerary, restructured if the original plan wasn't feasible")
+    @Action
+    public DayByDayItinerary generateItinerary(ItineraryOutline itineraryOutline, TransitEstimates transitEstimates,
+                                                 FeasibilityReport feasibilityReport, TravelerPreferences travelerPreferences,
+                                                 OperationContext context) {
+        String stopsSummary = itineraryOutline.stops().stream()
+                .map(stop -> "- %s: %d planned day(s)".formatted(stop.city(), stop.plannedDays()))
+                .collect(Collectors.joining("\n"));
 
+        String legsSummary = transitEstimates.legs().stream()
+                .map(leg -> "- %s to %s: %.1fh (%s)".formatted(leg.fromCity(), leg.toCity(), leg.estimatedHours(), leg.mode()))
+                .collect(Collectors.joining("\n"));
+
+        DayByDayItinerary itinerary = context.ai()
+                .withDefaultLlm()
+                .withPromptContributors(List.of(Personas.SEASONED_TRAVELER))
+                .createObjectIfPossible(
+                        """
+                        Planned stops:
+                        %s
+
+                        Estimated transit legs:
+                        %s
+
+                        Feasibility verdict: %s (%s)
+                        Traveler interests: %s
+
+                        If the plan was found NOT feasible, restructure it - this may mean
+                        cutting a city, combining two nearby stops, or extending total trip
+                        length - and clearly say so. If it was feasible, build the day-by-day
+                        plan as originally allocated. Account for transit legs explicitly:
+                        a travel day with a multi-hour transit leg should have a lighter
+                        sightseeing plan than a full day in one city. Tailor activities to
+                        the stated interests.
+                        Create a DayByDayItinerary with one entry per day and note whether
+                        it was adjusted for feasibility.
+                        """.formatted(
+                                stopsSummary,
+                                legsSummary.isBlank() ? "(no transit required)" : legsSummary,
+                                feasibilityReport.isFeasible() ? "FEASIBLE" : "NOT FEASIBLE",
+                                feasibilityReport.verdict(),
+                                String.join(", ", travelerPreferences.interests())
+                        ),
+                        DayByDayItinerary.class
+                );
+
+        log.info("Itinerary generated: {} days, adjusted for feasibility: {}",
+                itinerary != null ? itinerary.dailyPlans().size() : 0,
+                itinerary != null && itinerary.wasAdjustedForFeasibility());
+        return itinerary;
+    }
 }
