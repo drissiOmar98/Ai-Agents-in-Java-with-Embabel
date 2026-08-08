@@ -135,5 +135,42 @@ public class TripPlanningAgent {
                 );
     }
 
+    /**
+     * Estimates realistic inter-city transit time for every leg the
+     * itinerary requires, using {@link TransitTimeEstimatorTool} so each
+     * duration reflects real overhead and average speed by mode, not a
+     * bare guess.
+     *
+     * @param itineraryOutline the output of {@link #extractItineraryOutline}
+     * @param context          Embabel's operation context, providing access to the LLM
+     * @return every transit leg with its estimated duration, and the total transit time
+     */
+    @Action(description = "Estimate realistic inter-city transit times")
+    public TransitEstimates estimateTransitTimes(ItineraryOutline itineraryOutline, OperationContext context) {
+        return context.ai()
+                .withDefaultLlm()
+                .withToolObject(transitTimeEstimatorTool)
+                .createObjectIfPossible(
+                        """
+                        Trip stops in order: %s
+
+                        For each consecutive pair of stops, estimate the approximate
+                        distance in kilometers and the most likely transport mode
+                        (FLIGHT, TRAIN, CAR, or BUS) based on your geographic knowledge.
+                        Then use the calculateTransitTimes tool with all legs formatted
+                        as fromCity|toCity|distanceKm|mode, separated by semicolons.
+
+                        Put the tool's exact per-leg results into legs and its exact
+                        TOTAL figure into totalTransitHours.
+                        Create a TransitEstimates from the tool's result.
+                        """.formatted(
+                                itineraryOutline.stops().stream()
+                                        .map(DestinationStop::city)
+                                        .collect(Collectors.joining(" -> "))
+                        ),
+                        TransitEstimates.class
+                );
+    }
+
 
 }
